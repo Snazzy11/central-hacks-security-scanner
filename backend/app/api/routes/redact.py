@@ -16,14 +16,16 @@ router = APIRouter(prefix="/redact", tags=["redact"])
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MiB
+MAX_TOTAL_SIZE = 50 * 1024 * 1024  # 50 MiB, combined across all files in one request
 MAX_FILES = 20
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md"}
 
 
-async def save_upload(file: UploadFile, owner_id: int) -> UploadedFile:
+async def save_upload(
+    file: UploadFile, owner_id: int, max_size: int = MAX_TOTAL_SIZE
+) -> UploadedFile:
     """Validate and store one upload on disk. Returns an UploadedFile row that the caller
-    must add to the session. Removes the partial file if anything fails."""
+    must add to the session. `max_size` is how many bytes this file may use. Removes the partial file if anything fails."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file selected")
 
@@ -47,10 +49,10 @@ async def save_upload(file: UploadFile, owner_id: int) -> UploadedFile:
             while chunk := await file.read(1024 * 1024):
                 size += len(chunk)
 
-                if size > MAX_FILE_SIZE:
+                if size > max_size:
                     raise HTTPException(
                         status_code=413,
-                        detail=f"{file.filename} exceeds 50 MB limit"
+                        detail="Upload exceeds the 50 MB total size limit"
                     )
 
                 digest.update(chunk)
@@ -105,7 +107,8 @@ async def upload_multiple_files(
     saved: list[UploadedFile] = []
     try:
         for file in files:
-            saved.append(await save_upload(file, user.id))
+            used = sum(row.size for row in saved)
+            saved.append(await save_upload(file, user.id, MAX_TOTAL_SIZE - used))
         db.add_all(saved)
         db.commit()
     except Exception:

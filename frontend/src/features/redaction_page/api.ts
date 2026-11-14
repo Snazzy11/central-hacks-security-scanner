@@ -1,32 +1,13 @@
-export interface UploadResponse {
-  filename: string;
-  original_filename: string;
-  content_type: string;
-  size: number;
-  location: string;
-}
+import { api } from '@/lib/api';
 
-export async function uploadRedactionFile(
-  file: File,
-): Promise<UploadResponse> {
-  const formData = new FormData();
+import type { UploadedFileList } from './types';
 
-  formData.append('file', file);
+// Keep these in sync with MAX_FILES / MAX_TOTAL_SIZE in backend/app/api/routes/redact.py
+export const MAX_FILES = 20;
+export const MAX_TOTAL_SIZE = 50 * 1024 ** 2;
 
-  const response = await fetch('/api/redact/single', {
-    method: 'POST',
-    body: formData,
-    // Add your authentication headers here if needed.
-    // Do NOT manually set Content-Type.
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => null);
-
-    throw new Error(
-      error?.detail ?? 'Failed to upload file',
-    );
-  }
-
-  return response.json();
+export function uploadFiles(files: File[]) {
+  const body = new FormData();
+  for (const file of files) body.append('files', file);
+  return api<UploadedFileList>('/redact/multiple', { method: 'POST', body });
 }

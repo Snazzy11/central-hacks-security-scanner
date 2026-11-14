@@ -1,6 +1,7 @@
 // Mantine's component styles. Without these imports Mantine components render unstyled.
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import '@mantine/dropzone/styles.css';
 
 import { createRoot } from 'react-dom/client';
 
