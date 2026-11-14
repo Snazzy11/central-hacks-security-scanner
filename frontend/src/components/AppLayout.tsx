@@ -1,5 +1,5 @@
 import { AppShell, Button, Container, Group, Text, Title } from '@mantine/core';
-import { Outlet } from 'react-router';
+import { Link, Outlet } from 'react-router';
 
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -14,6 +14,7 @@ export function AppLayout() {
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Title order={3}>Hackathon App</Title>
+          <Link to="/redact">Redact File</Link>
           <Group>
             <Text size="sm" c="dimmed">{user?.email}</Text>
             <ColorSchemeToggle />
