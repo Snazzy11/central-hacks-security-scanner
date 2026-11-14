@@ -1,4 +1,4 @@
-# Hackathon App
+# PiiShooter
 
 ```bash
 ./run.sh dev     # backend :8000 (API docs at /docs), frontend :5173

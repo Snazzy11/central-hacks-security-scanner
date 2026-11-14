@@ -16,7 +16,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title="Hackathon API", lifespan=lifespan)
+app = FastAPI(title="PiiShooter API", lifespan=lifespan)
 
 # Not needed in dev (Vite proxies /api), but handy if you hit the API directly.
 app.add_middleware(

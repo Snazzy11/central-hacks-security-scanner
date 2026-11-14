@@ -12,7 +12,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/redact" replace />;
 
   const isLogin = mode === 'login';
 
