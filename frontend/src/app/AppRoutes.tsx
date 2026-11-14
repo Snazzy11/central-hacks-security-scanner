@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { RequireAuth } from '@/components/RequireAuth';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { NotesPage } from '@/features/notes/NotesPage';
+import { RedactionPage } from '@/features/redaction_page/RedactionPage';
 
 export function AppRoutes() {
   return (
@@ -16,6 +17,7 @@ export function AppRoutes() {
           <Route element={<AppLayout />}>
             <Route index element={<NotesPage />} />
             {/* New pages go here: <Route path="thing" element={<ThingPage />} /> */}
+            <Route path="redact" element={<RedactionPage />} />
           </Route>
         </Route>
 
