@@ -18,7 +18,6 @@ export function AppLayout() {
             <Brand />
             <Button
               onClick={() => window.location.assign('/api/redact')}
-              color="lime"
             >
               Redact My Files
             </Button>

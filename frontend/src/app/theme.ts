@@ -2,7 +2,7 @@ import { createTheme } from '@mantine/core';
 
 /**
  * Look and feel lives here. Mantine turns this object into CSS variables
- * (--mantine-color-indigo-6, --mantine-radius-md, ...) and every component reads
+ * (--mantine-color-lime-6, --mantine-radius-md, ...) and every component reads
  * from them, so changing a value restyles the whole app. You rarely need to write CSS.
  *
  * Quick wins:
@@ -17,7 +17,9 @@ import { createTheme } from '@mantine/core';
  * variables in it, e.g. `background: var(--mantine-color-body)`.
  */
 export const theme = createTheme({
-  primaryColor: 'indigo',
+  primaryColor: 'lime',
+  primaryShade: 6, // lime.6 in both light and dark mode
+  autoContrast: true, // lime is light, so filled buttons get dark text instead of white
   defaultRadius: 'md',
   fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   headings: { fontWeight: '700' },

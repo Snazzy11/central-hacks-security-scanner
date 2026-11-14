@@ -70,7 +70,7 @@ export function HomePage() {
       <Container size="md" py="md">
         <Group justify="space-between">
           <Group gap="xs">
-            <IconShieldLock size={28} color="var(--mantine-color-indigo-6)" />
+            <IconShieldLock size={28} color="var(--mantine-primary-color-filled)" />
             <Brand />
           </Group>
           <Group>
@@ -153,7 +153,7 @@ export function HomePage() {
           <Stack gap="sm">
             {PROMISES.map(({ icon: Icon, text }) => (
               <Group key={text} gap="sm" wrap="nowrap" align="flex-start">
-                <ThemeIcon variant="light" color="teal" radius="xl" size="md"><Icon size={16} /></ThemeIcon>
+                <ThemeIcon variant="light" radius="xl" size="md"><Icon size={16} /></ThemeIcon>
                 <Text>{text}</Text>
               </Group>
             ))}

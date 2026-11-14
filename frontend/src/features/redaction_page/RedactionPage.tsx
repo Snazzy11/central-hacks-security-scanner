@@ -81,7 +81,7 @@ export function RedactionPage() {
       >
         <Stack align="center" justify="center" gap="xs" mih={200} style={{ pointerEvents: 'none' }}>
           <Dropzone.Accept>
-            <IconUpload size={48} stroke={1.5} color="var(--mantine-color-indigo-6)" />
+            <IconUpload size={48} stroke={1.5} color="var(--mantine-primary-color-filled)" />
           </Dropzone.Accept>
           <Dropzone.Reject>
             <IconX size={48} stroke={1.5} color="var(--mantine-color-red-6)" />
@@ -103,7 +103,7 @@ export function RedactionPage() {
             {`${formatSize(totalSize)} of ${MAX_TOTAL_MB} MB`}
           </Text>
         </Group>
-        <Progress value={usedPercent} color={usedPercent >= 90 ? 'red' : 'indigo'} size="sm" />
+        <Progress value={usedPercent} color={usedPercent >= 90 ? 'red' : undefined} size="sm" />
       </Paper>
 
       <Paper withBorder p="md" radius="md">
