@@ -1,0 +1,20 @@
+{
+    "name":"piidifile", 
+    "version":"1.0.0",
+    "description":"A simple extension to detect personal information identifiers in files in order to help users protect their privacy.",
+    "manifest_version":3,
+    "permissions": ["storage", "activeTab"],
+    "action": {
+        "default_title": "PII Upload Filter",
+        "default_popup": "popup/popup.html"
+    },
+    "content_scripts": [
+        {
+        "matches": ["<all_urls>"],
+        "js": ["src/detectors.js", "src/zip.js", "src/office.js", "src/content.js"],
+        "run_at": "document_start",
+        "all_frames": true,
+        "match_origin_as_fallback": true
+        }
+    ]
+}
