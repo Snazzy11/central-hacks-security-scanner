@@ -22,8 +22,8 @@ import json
 from collections import Counter, defaultdict
 
 import pandas as pd
-from model_scan import  rescan
-from prefilter import PII_ENTITIES, find_pii, DEFAULT_MODE
+from app.model_scan import  rescan
+from app.prefilter import PII_ENTITIES, find_pii, DEFAULT_MODE
 
 BETA = 2.0  # >1 weights recall more. 2 = recall counts twice as much.
 

@@ -1,18 +1,22 @@
 import asyncio
 import hashlib
+import logging
 import uuid
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser
 from app.db.session import DbSession
 from app.models import DetectionMode, OutputMode, UploadedFile
+from app.orchestrator import process_file
 from app.schemas.uploaded_file import UploadedFileList, UploadedFileRead
 
 router = APIRouter(prefix="/redact", tags=["redact"])
+logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -95,6 +99,18 @@ async def _discard(rows: list[UploadedFile]) -> None:
         await asyncio.to_thread(Path(row.file_path).unlink, missing_ok=True)
 
 
+async def process_uploads(db: DbSession, rows: list[UploadedFile]) -> None:
+    """Run the redaction pipeline on each saved file. A failure marks only that file "failed"."""
+    for row in rows:
+        try:
+            output_path = await asyncio.to_thread(process_file, row)
+            row.output_path, row.status = str(output_path), "completed"
+        except Exception:
+            logger.exception("Redaction failed for file %s", row.id)
+            row.status = "failed"
+    db.commit()
+
+
 @router.post("/single", response_model=UploadedFileRead, status_code=status.HTTP_201_CREATED)
 async def upload_single_file(
     user: CurrentUser,
@@ -110,6 +126,7 @@ async def upload_single_file(
     except Exception:
         await _discard([row])
         raise
+    await process_uploads(db, [row])
     return row
 
 
@@ -142,6 +159,7 @@ async def upload_multiple_files(
         await _discard(saved)
         raise
 
+    await process_uploads(db, saved)
     return UploadedFileList(
         batch_id=batch_id, count=len(saved), files=[UploadedFileRead.model_validate(r) for r in saved]
     )
@@ -180,3 +198,11 @@ def get_my_file(file_id: int, user: CurrentUser, db: DbSession) -> UploadedFile:
     if row is None or row.owner_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
     return row
+
+
+@router.get("/{file_id}/download")
+def download_my_file(file_id: int, user: CurrentUser, db: DbSession) -> FileResponse:
+    row = get_my_file(file_id, user, db)
+    if row.status != "completed" or row.output_path is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"File is not ready (status: {row.status})")
+    return FileResponse(row.output_path, filename=f"{Path(row.original_filename).stem}.redacted.txt")

@@ -17,7 +17,14 @@ type Options = Omit<RequestInit, 'body'> & { json?: unknown; body?: BodyInit };
  * and throws ApiError (with FastAPI's error message) on non-2xx responses.
  * Pass `json` for a JSON body.
  */
-export async function api<T>(path: string, { json, ...init }: Options = {}): Promise<T> {
+export async function api<T>(path: string, options: Options = {}): Promise<T> {
+  const res = await request(path, options);
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+/** Same as api() but returns the raw Response, e.g. for file downloads. */
+export async function request(path: string, { json, ...init }: Options = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
@@ -33,8 +40,7 @@ export async function api<T>(path: string, { json, ...init }: Options = {}): Pro
     const data = (await res.json().catch(() => null)) as { detail?: unknown } | null;
     throw new ApiError(res.status, errorMessage(data?.detail) ?? res.statusText);
   }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  return res;
 }
 
 function errorMessage(detail: unknown): string | undefined {

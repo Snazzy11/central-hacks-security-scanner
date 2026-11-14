@@ -1,12 +1,12 @@
 import { ActionIcon, Button, Group, Paper, Progress, SegmentedControl, Stack, Text, Title } from '@mantine/core';
 import { Dropzone, type FileRejection, MIME_TYPES } from '@mantine/dropzone';
 import { notifications } from '@mantine/notifications';
-import { IconFile, IconFileUpload, IconUpload, IconX } from '@tabler/icons-react';
+import { IconDownload, IconFile, IconFileUpload, IconUpload, IconX } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { MAX_FILES, MAX_TOTAL_SIZE, uploadFiles } from './api';
-import type { DetectionMode, OutputMode } from './types';
+import { downloadFile, MAX_FILES, MAX_TOTAL_SIZE, uploadFiles } from './api';
+import type { DetectionMode, OutputMode, UploadedFile } from './types';
 
 const ACCEPTED_TYPES = [MIME_TYPES.pdf, MIME_TYPES.docx, 'text/plain', 'text/markdown'];
 
@@ -37,11 +37,17 @@ export function RedactionPage() {
   const upload = useMutation({
     mutationFn: uploadFiles,
     onSuccess: (data) => {
-      notifications.show({ color: 'green', message: `Uploaded ${data.count} file${data.count === 1 ? '' : 's'}` });
+      const failed = data.files.filter(f => f.status === 'failed').length;
+      notifications.show(failed
+        ? { color: 'red', title: 'Some files failed', message: `${failed} of ${data.count} could not be processed` }
+        : { color: 'green', message: `Processed ${data.count} file${data.count === 1 ? '' : 's'}` });
       setFiles([]);
     },
     onError: err => notifications.show({ color: 'red', title: 'Upload failed', message: err.message }),
   });
+
+  const download = (file: UploadedFile) =>
+    downloadFile(file).catch((err: Error) => notifications.show({ color: 'red', title: 'Download failed', message: err.message }));
 
   const addFiles = (dropped: File[]) => {
     // Skip anything already selected (same name, size and modified time)
@@ -168,6 +174,26 @@ export function RedactionPage() {
           {files.length > 0 ? `Upload ${files.length} file${files.length === 1 ? '' : 's'}` : 'Upload'}
         </Button>
       </Group>
+
+      {upload.data && (
+        <Stack gap="xs">
+          <Title order={4}>Results</Title>
+          {upload.data.files.map(f => (
+            <Paper key={f.id} withBorder px="md" py="xs" radius="md">
+              <Group justify="space-between" wrap="nowrap">
+                <Text size="sm" truncate>{f.original_filename}</Text>
+                {f.status === 'completed'
+                  ? (
+                      <Button size="xs" leftSection={<IconDownload size={14} />} onClick={() => void download(f)}>
+                        Download
+                      </Button>
+                    )
+                  : <Text size="sm" c="red">Failed</Text>}
+              </Group>
+            </Paper>
+          ))}
+        </Stack>
+      )}
     </Stack>
   );
 }

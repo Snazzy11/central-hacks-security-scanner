@@ -48,6 +48,7 @@ class UploadedFile(Base):
     output_mode: Mapped[str] = mapped_column(
         String(16), default=OutputMode.REDACT, server_default=OutputMode.REDACT
     )
+    output_path: Mapped[str | None] = mapped_column(String(1024))  # the redacted copy, once made
     status: Mapped[str] = mapped_column(String(32), default="uploaded")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
