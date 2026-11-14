@@ -39,7 +39,7 @@ const STEPS = [
   },
   {
     icon: IconScan,
-    title: '2. We find the PII',
+    title: '2. We keep your sensitive data from being leaked',
     text: 'Names, emails, phone numbers, addresses, IDs and more are detected. Optionally, an AI check runs on top to catch what the rules miss.',
   },
   {
@@ -50,10 +50,10 @@ const STEPS = [
 ];
 
 const MODES = [
-  { title: 'Script mode', text: 'Fast, rule-based detection of PII patterns.' },
-  { title: 'AI mode', text: 'Runs script mode, then adds an AI check layer on top to catch PII the rules miss.' },
-  { title: 'Redact mode', text: 'Removes all PII from your document.' },
-  { title: 'Replace mode', text: 'Swaps PII for consistent fake data, so the same real value always becomes the same fake one.' },
+  { title: 'Script mode', text: 'Fast, rule-based detection of personal information patterns.' },
+  { title: 'AI mode', text: 'Runs script mode, then adds an AI check layer on top to catch personal information the rules miss.' },
+  { title: 'Redact mode', text: 'Removes all personal information from your document.' },
+  { title: 'Replace mode', text: 'Swaps personal information for consistent fake data, so the same real value always becomes the same fake one.' },
 ];
 
 const PROMISES = [
