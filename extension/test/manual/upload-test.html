@@ -1,0 +1,15 @@
+<!DOCTYPE html><html><body>
+<input type="file" id="f" multiple>
+<div id="drop" style="width:300px;height:100px;border:2px dashed #999">drop here</div>
+<pre id="out"></pre>
+<script>
+async function show(files, how){
+  const res=[];
+  for (const f of files){ const b=new Uint8Array(await f.arrayBuffer()); let s=''; b.forEach(x=>s+=String.fromCharCode(x)); res.push({name:f.name,how,b64:btoa(s)}); }
+  document.getElementById('out').textContent=JSON.stringify(res);
+}
+document.getElementById('f').addEventListener('change', e=>show(e.target.files,'input'));
+const d=document.getElementById('drop');
+d.addEventListener('dragover',e=>e.preventDefault());
+d.addEventListener('drop',e=>{e.preventDefault();show(e.dataTransfer.files,'drop')});
+</script></body></html>

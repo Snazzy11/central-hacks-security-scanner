@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PII Upload Filter</title>
+  <style>
+    body { width: 300px; margin: 0; padding: 14px 16px; font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: #0f172a; }
+    h1 { font-size: 15px; margin: 0 0 10px; }
+    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin: 14px 0 6px; }
+    label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
+    select { font: inherit; width: 100%; padding: 4px; }
+    .site { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; border-radius: 8px; padding: 8px 10px; }
+    .site span { font-weight: 600; word-break: break-all; }
+    .hint { color: #64748b; font-size: 12px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>PII Upload Filter</h1>
+
+  <div class="site" id="siteRow">
+    <span id="host">this site</span>
+    <label><input type="checkbox" id="siteEnabled"> On</label>
+  </div>
+
+  <h2>When PII is found</h2>
+  <select id="mode">
+    <option value="ask">Ask me what to do</option>
+    <option value="auto">Redact automatically</option>
+  </select>
+
+  <h2>Detect</h2>
+  <div id="detectors"></div>
+
+  <h2>Other</h2>
+  <label><input type="checkbox" id="stripMetadata"> Remove author names from Office files</label>
+  <label><input type="checkbox" id="warnUnsupported"> Warn about files that can't be checked (e.g. PDF)</label>
+  <div class="hint">Changes apply to new uploads immediately.</div>
+
+  <script src="../src/detectors.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
