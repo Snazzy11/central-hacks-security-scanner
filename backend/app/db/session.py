@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import create_engine
+from sqlalchemy import DefaultClause, create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
@@ -31,6 +31,24 @@ def init_db() -> None:
     import app.models  # noqa: F401  (importing registers the models on Base.metadata)
 
     Base.metadata.create_all(bind=engine)
+    _add_missing_columns()
+
+
+def _add_missing_columns() -> None:
+    """create_all skips tables that already exist, so add any new columns to old databases.
+    Only handles plain nullable/defaulted columns; anything fancier needs Alembic."""
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            existing = {c["name"] for c in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                col_type = column.type.compile(engine.dialect)
+                ddl = f"ALTER TABLE {table.name} ADD COLUMN {column.name} {col_type}"
+                if isinstance(column.server_default, DefaultClause):
+                    ddl += f" DEFAULT '{column.server_default.arg}'"
+                conn.execute(text(ddl))
 
 
 def seed_default_user() -> None:

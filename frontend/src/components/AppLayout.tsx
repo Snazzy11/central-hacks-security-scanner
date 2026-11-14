@@ -1,8 +1,9 @@
-import { AppShell, Button, Container, Group, Text, Title } from '@mantine/core';
+import { AppShell, Button, Container, Group, Text } from '@mantine/core';
 import { Outlet } from 'react-router';
 
 import { useAuth } from '@/features/auth/useAuth';
 
+import { Brand } from './Brand';
 import { ColorSchemeToggle } from './ColorSchemeToggle';
 
 /** Header + page area for logged-in pages. Child routes render where <Outlet /> is. */
@@ -13,7 +14,14 @@ export function AppLayout() {
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
-          <Title order={3}>Hackathon App</Title>
+          <Group>
+            <Brand />
+            <Button
+              onClick={() => window.location.assign('/api/redact')}
+            >
+              Redact My Files
+            </Button>
+          </Group>
           <Group>
             <Text size="sm" c="dimmed">{user?.email}</Text>
             <ColorSchemeToggle />
