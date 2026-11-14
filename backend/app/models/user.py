@@ -8,6 +8,7 @@ from app.db.base import Base, utcnow
 
 if TYPE_CHECKING:
     from app.models.note import Note
+    from app.models.uploaded_file import UploadedFile
 
 
 class User(Base):
@@ -19,3 +20,6 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     notes: Mapped[list["Note"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
+    files: Mapped[list["UploadedFile"]] = relationship(
+        back_populates="owner", cascade="all, delete-orphan"
+    )
