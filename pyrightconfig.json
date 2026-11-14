@@ -1,0 +1,9 @@
+{
+  "include": ["backend/app"],
+  "venvPath": "backend",
+  "venv": ".venv",
+  "executionEnvironments": [{ "root": "backend" }],
+  "typeCheckingMode": "standard",
+  "reportUnnecessaryComparison": "warning",
+  "reportUnnecessaryTypeIgnoreComment": "warning"
+}
