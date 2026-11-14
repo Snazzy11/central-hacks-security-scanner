@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from pathlib import Path
 
@@ -9,11 +10,12 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MiB
+MAX_FILES = 20
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md"}
 
 
-@router.post("/single")
-async def upload_single_file(file: UploadFile = File(...)):
+async def save_upload(file: UploadFile) -> dict:
+    """Validate and store one upload. Removes the partial file if anything fails."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file selected")
 
@@ -22,7 +24,7 @@ async def upload_single_file(file: UploadFile = File(...)):
     if extension not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail="Unsupported file type"
+            detail=f"Unsupported file type: {file.filename}"
         )
 
     # Generate a uuid
@@ -32,20 +34,20 @@ async def upload_single_file(file: UploadFile = File(...)):
     size = 0
 
     try:
-        with open(file_path, "wb") as buffer:
+        with file_path.open("wb") as buffer:
             while chunk := await file.read(1024 * 1024):
                 size += len(chunk)
 
                 if size > MAX_FILE_SIZE:
                     raise HTTPException(
                         status_code=413,
-                        detail="File exceeds 50 MB limit"
+                        detail=f"{file.filename} exceeds 50 MB limit"
                     )
 
-                buffer.write(chunk)
+                await asyncio.to_thread(buffer.write, chunk)
 
     except Exception:
-        file_path.unlink(missing_ok=True)
+        await asyncio.to_thread(file_path.unlink, missing_ok=True)
         raise
 
     finally:
@@ -58,3 +60,28 @@ async def upload_single_file(file: UploadFile = File(...)):
         "size": size,
         "location": str(file_path)
     }
+
+
+@router.post("/single")
+async def upload_single_file(file: UploadFile = File(...)):
+    return await save_upload(file)
+
+
+@router.post("/multiple")
+async def upload_multiple_files(files: list[UploadFile] = File(...)):
+    if not files:
+        raise HTTPException(status_code=400, detail="No files selected")
+    if len(files) > MAX_FILES:
+        raise HTTPException(status_code=400, detail=f"Too many files (max {MAX_FILES})")
+
+    saved: list[dict] = []
+    try:
+        for file in files:
+            saved.append(await save_upload(file))
+    except Exception:
+        # don't leave earlier files of a failed batch on disk
+        for item in saved:
+            await asyncio.to_thread(Path(item["location"]).unlink, missing_ok=True)
+        raise
+
+    return {"count": len(saved), "files": saved}
