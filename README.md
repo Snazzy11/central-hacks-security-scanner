@@ -19,8 +19,8 @@ Open this folder in VS Code and accept the recommended extensions to get autofix
 | `api/` | `deps.py` (auth dependency), `routes/` (one file per resource), `router.py` (wires them up) |
 
 Adding a resource: model in `models/`, schemas in `schemas/`, route file in `api/routes/`
-(copy `notes.py`), then include it in `api/router.py`. Add `user: CurrentUser` to any
-endpoint to require login. Tables are created on startup; if you change an existing
+(see `redact.py`), then include it in `api/router.py`. Routers included with
+`dependencies=protected` require login; add `user: CurrentUser` to get the caller. Tables are created on startup; if you change an existing
 model, delete `backend/app.db`.
 
 Config is in `backend/.env` (`DATABASE_URL`, `SECRET_KEY`).
@@ -34,7 +34,7 @@ Config is in `backend/.env` (`DATABASE_URL`, `SECRET_KEY`).
 | `components/` | UI shared across features (layout, route guard) |
 | `lib/` | helpers with no UI (the `api()` fetch wrapper) |
 
-`features/notes/` is the template to copy. Import with `@/` (maps to `src/`).
+`features/redaction_page/` is the template to copy. Import with `@/` (maps to `src/`).
 
 ### Styling
 

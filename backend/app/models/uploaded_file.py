@@ -39,6 +39,8 @@ class UploadedFile(Base):
     file_path: Mapped[str] = mapped_column(String(1024))
     mime_type: Mapped[str | None] = mapped_column(String(255))
     size: Mapped[int]  # bytes
+    # Files uploaded in the same request share a batch id, so a client can track them together.
+    batch_id: Mapped[str] = mapped_column(String(36), index=True, server_default="")
     sha256: Mapped[str] = mapped_column(String(64), index=True)
     detection_mode: Mapped[str] = mapped_column(
         String(16), default=DetectionMode.SCRIPT, server_default=DetectionMode.SCRIPT

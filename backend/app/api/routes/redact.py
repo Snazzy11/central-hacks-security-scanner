@@ -30,6 +30,7 @@ OutputModeForm = Annotated[OutputMode, Form()]
 async def save_upload(
     file: UploadFile,
     owner_id: int,
+    batch_id: str,
     detection_mode: DetectionMode,
     output_mode: OutputMode,
     max_size: int = MAX_TOTAL_SIZE,
@@ -84,6 +85,7 @@ async def save_upload(
         sha256=digest.hexdigest(),
         detection_mode=detection_mode,
         output_mode=output_mode,
+        batch_id=batch_id,
         owner_id=owner_id,
     )
 
@@ -101,7 +103,7 @@ async def upload_single_file(
     detection_mode: DetectionModeForm = DetectionMode.SCRIPT,
     output_mode: OutputModeForm = OutputMode.REDACT,
 ) -> UploadedFile:
-    row = await save_upload(file, user.id, detection_mode, output_mode)
+    row = await save_upload(file, user.id, str(uuid.uuid4()), detection_mode, output_mode)
     try:
         db.add(row)
         db.commit()
@@ -124,12 +126,13 @@ async def upload_multiple_files(
     if len(files) > MAX_FILES:
         raise HTTPException(status_code=400, detail=f"Too many files (max {MAX_FILES})")
 
+    batch_id = str(uuid.uuid4())
     saved: list[UploadedFile] = []
     try:
         for file in files:
             used = sum(row.size for row in saved)
             saved.append(await save_upload(
-                    file, user.id, detection_mode, output_mode, MAX_TOTAL_SIZE - used
+                    file, user.id, batch_id, detection_mode, output_mode, MAX_TOTAL_SIZE - used
                 ))
         db.add_all(saved)
         db.commit()
@@ -140,7 +143,7 @@ async def upload_multiple_files(
         raise
 
     return UploadedFileList(
-        count=len(saved), files=[UploadedFileRead.model_validate(r) for r in saved]
+        batch_id=batch_id, count=len(saved), files=[UploadedFileRead.model_validate(r) for r in saved]
     )
 
 
@@ -152,6 +155,22 @@ def list_my_files(user: CurrentUser, db: DbSession) -> list[UploadedFile]:
         .order_by(UploadedFile.created_at.desc())
     )
     return list(db.scalars(query))
+
+
+@router.get("/batches/{batch_id}", response_model=UploadedFileList)
+def get_my_batch(batch_id: str, user: CurrentUser, db: DbSession) -> UploadedFileList:
+    """All files uploaded together in one request, e.g. for a client polling a batch."""
+    query = (
+        select(UploadedFile)
+        .where(UploadedFile.batch_id == batch_id, UploadedFile.owner_id == user.id)
+        .order_by(UploadedFile.id)
+    )
+    rows = list(db.scalars(query))
+    if not rows:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
+    return UploadedFileList(
+        batch_id=batch_id, count=len(rows), files=[UploadedFileRead.model_validate(r) for r in rows]
+    )
 
 
 @router.get("/{file_id}", response_model=UploadedFileRead)

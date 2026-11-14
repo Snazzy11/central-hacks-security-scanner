@@ -13,6 +13,7 @@ class UploadedFileRead(BaseModel):
     file_path: str
     mime_type: str | None
     size: int
+    batch_id: str
     sha256: str
     detection_mode: DetectionMode
     output_mode: OutputMode
@@ -21,5 +22,6 @@ class UploadedFileRead(BaseModel):
 
 
 class UploadedFileList(BaseModel):
+    batch_id: str
     count: int
     files: list[UploadedFileRead]

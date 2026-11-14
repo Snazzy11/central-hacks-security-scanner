@@ -13,6 +13,7 @@ export interface UploadedFile {
   file_path: string;
   mime_type: string | null;
   size: number;
+  batch_id: string;
   sha256: string;
   detection_mode: DetectionMode;
   output_mode: OutputMode;
@@ -21,6 +22,7 @@ export interface UploadedFile {
 }
 
 export interface UploadedFileList {
+  batch_id: string;
   count: number;
   files: UploadedFile[];
 }
