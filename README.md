@@ -23,7 +23,7 @@ Adding a resource: model in `models/`, schemas in `schemas/`, route file in `api
 endpoint to require login. Tables are created on startup; if you change an existing
 model, delete `backend/app.db`.
 
-Config is in `backend/.env` (`DATABASE_URL`, `SECRET_KEY`).
+Config is in `backend/.env` (`DATABASE_URL`, `SECRET_KEY`, and `ADMIN_EMAIL` / `ADMIN_PASSWORD` for the built-in `it_admin` account created on startup).
 
 ## Frontend (`frontend/src/`)
 

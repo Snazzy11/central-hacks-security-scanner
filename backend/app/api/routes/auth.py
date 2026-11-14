@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser
+from app.core.roles import DEFAULT_ROLE
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import DbSession
 from app.models import User
@@ -19,7 +20,13 @@ def register(body: UserCreate, db: DbSession) -> Token:
     email = body.email.lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
-    user = User(email=email, hashed_password=hash_password(body.password))
+    user = User(
+        first_name=body.first_name.strip(),
+        last_name=body.last_name.strip(),
+        email=email,
+        hashed_password=hash_password(body.password),
+        role=DEFAULT_ROLE,  # never let a signup pick its own role; admins promote users
+    )
     db.add(user)
     db.commit()
     return Token(access_token=create_access_token(user.id))

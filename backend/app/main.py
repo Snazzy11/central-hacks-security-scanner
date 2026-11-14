@@ -6,12 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.db.seed import seed_admin
 from app.db.session import init_db
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
+    seed_admin() # create seeded admin account data
     yield
 
 

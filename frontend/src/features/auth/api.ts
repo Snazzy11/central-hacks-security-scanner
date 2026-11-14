@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 
-import type { Token, User } from './types';
+import type { RegisterData, Token, User } from './types';
 
 export const fetchMe = () => api<User>('/auth/me');
 
@@ -11,5 +11,5 @@ export const loginRequest = (email: string, password: string) =>
     body: new URLSearchParams({ username: email, password }),
   });
 
-export const registerRequest = (email: string, password: string) =>
-  api<Token>('/auth/register', { method: 'POST', json: { email, password } });
+export const registerRequest = (data: RegisterData) =>
+  api<Token>('/auth/register', { method: 'POST', json: data });

@@ -9,6 +9,8 @@ import { useAuth } from './useAuth';
 export function LoginPage() {
   const { user, login, register } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -19,7 +21,8 @@ export function LoginPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      await (mode === 'login' ? login : register)(email, password);
+      if (mode === 'login') await login(email, password);
+      else await register({ first_name: firstName, last_name: lastName, email, password });
     }
     catch (err) {
       notifications.show({
@@ -39,6 +42,24 @@ export function LoginPage() {
       <Paper withBorder shadow="sm" p="xl" mt="xl">
         <form onSubmit={submit}>
           <Stack>
+            {mode === 'register' && (
+              <>
+                <TextInput
+                  label="First name"
+                  required
+                  maxLength={50}
+                  value={firstName}
+                  onChange={e => setFirstName(e.currentTarget.value)}
+                />
+                <TextInput
+                  label="Last name"
+                  required
+                  maxLength={50}
+                  value={lastName}
+                  onChange={e => setLastName(e.currentTarget.value)}
+                />
+              </>
+            )}
             <TextInput
               label="Email"
               type="email"

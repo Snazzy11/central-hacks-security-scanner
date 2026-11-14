@@ -15,7 +15,7 @@ export function AppLayout() {
         <Group h="100%" px="md" justify="space-between">
           <Title order={3}>Hackathon App</Title>
           <Group>
-            <Text size="sm" c="dimmed">{user?.email}</Text>
+            <Text size="sm" c="dimmed">{user?.first_name} {user?.last_name}</Text>
             <ColorSchemeToggle />
             <Button variant="light" onClick={logout}>Log out</Button>
           </Group>

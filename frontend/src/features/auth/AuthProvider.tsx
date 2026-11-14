@@ -38,8 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken((await loginRequest(email, password)).access_token);
       await loadUser();
     },
-    register: async (email, password) => {
-      setToken((await registerRequest(email, password)).access_token);
+    register: async (data) => {
+      setToken((await registerRequest(data)).access_token);
       await loadUser();
     },
     logout: () => {
