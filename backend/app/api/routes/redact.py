@@ -2,13 +2,14 @@ import asyncio
 import hashlib
 import uuid
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser
 from app.db.session import DbSession
-from app.models import UploadedFile
+from app.models import DetectionMode, OutputMode, UploadedFile
 from app.schemas.uploaded_file import UploadedFileList, UploadedFileRead
 
 router = APIRouter(prefix="/redact", tags=["redact"])
@@ -21,8 +22,17 @@ MAX_FILES = 20
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md"}
 
 
+# Form fields shared by both upload endpoints (the files themselves are multipart too).
+DetectionModeForm = Annotated[DetectionMode, Form()]
+OutputModeForm = Annotated[OutputMode, Form()]
+
+
 async def save_upload(
-    file: UploadFile, owner_id: int, max_size: int = MAX_TOTAL_SIZE
+    file: UploadFile,
+    owner_id: int,
+    detection_mode: DetectionMode,
+    output_mode: OutputMode,
+    max_size: int = MAX_TOTAL_SIZE,
 ) -> UploadedFile:
     """Validate and store one upload on disk. Returns an UploadedFile row that the caller
     must add to the session. `max_size` is how many bytes this file may use. Removes the partial file if anything fails."""
@@ -72,6 +82,8 @@ async def save_upload(
         mime_type=file.content_type,
         size=size,
         sha256=digest.hexdigest(),
+        detection_mode=detection_mode,
+        output_mode=output_mode,
         owner_id=owner_id,
     )
 
@@ -83,9 +95,13 @@ async def _discard(rows: list[UploadedFile]) -> None:
 
 @router.post("/single", response_model=UploadedFileRead, status_code=status.HTTP_201_CREATED)
 async def upload_single_file(
-    user: CurrentUser, db: DbSession, file: UploadFile = File(...)
+    user: CurrentUser,
+    db: DbSession,
+    file: UploadFile = File(...),
+    detection_mode: DetectionModeForm = DetectionMode.SCRIPT,
+    output_mode: OutputModeForm = OutputMode.REDACT,
 ) -> UploadedFile:
-    row = await save_upload(file, user.id)
+    row = await save_upload(file, user.id, detection_mode, output_mode)
     try:
         db.add(row)
         db.commit()
@@ -97,7 +113,11 @@ async def upload_single_file(
 
 @router.post("/multiple", response_model=UploadedFileList, status_code=status.HTTP_201_CREATED)
 async def upload_multiple_files(
-    user: CurrentUser, db: DbSession, files: list[UploadFile] = File(...)
+    user: CurrentUser,
+    db: DbSession,
+    files: list[UploadFile] = File(...),
+    detection_mode: DetectionModeForm = DetectionMode.SCRIPT,
+    output_mode: OutputModeForm = OutputMode.REDACT,
 ) -> UploadedFileList:
     if not files:
         raise HTTPException(status_code=400, detail="No files selected")
@@ -108,7 +128,9 @@ async def upload_multiple_files(
     try:
         for file in files:
             used = sum(row.size for row in saved)
-            saved.append(await save_upload(file, user.id, MAX_TOTAL_SIZE - used))
+            saved.append(await save_upload(
+                    file, user.id, detection_mode, output_mode, MAX_TOTAL_SIZE - used
+                ))
         db.add_all(saved)
         db.commit()
     except Exception:

@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String
@@ -8,6 +9,20 @@ from app.db.base import Base, utcnow
 
 if TYPE_CHECKING:
     from app.models.user import User
+
+
+class DetectionMode(StrEnum):
+    """script: rule-based PII detection. ai: script mode plus an AI check layer on top."""
+
+    SCRIPT = "script"
+    AI = "ai"
+
+
+class OutputMode(StrEnum):
+    """redact: blank out all PII. replace: swap PII for consistent fake data."""
+
+    REDACT = "redact"
+    REPLACE = "replace"
 
 
 class UploadedFile(Base):
@@ -25,6 +40,12 @@ class UploadedFile(Base):
     mime_type: Mapped[str | None] = mapped_column(String(255))
     size: Mapped[int]  # bytes
     sha256: Mapped[str] = mapped_column(String(64), index=True)
+    detection_mode: Mapped[str] = mapped_column(
+        String(16), default=DetectionMode.SCRIPT, server_default=DetectionMode.SCRIPT
+    )
+    output_mode: Mapped[str] = mapped_column(
+        String(16), default=OutputMode.REDACT, server_default=OutputMode.REDACT
+    )
     status: Mapped[str] = mapped_column(String(32), default="uploaded")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

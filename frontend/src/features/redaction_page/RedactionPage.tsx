@@ -1,4 +1,4 @@
-import { ActionIcon, Button, Group, Paper, Progress, Stack, Text, Title } from '@mantine/core';
+import { ActionIcon, Button, Group, Paper, Progress, SegmentedControl, Stack, Text, Title } from '@mantine/core';
 import { Dropzone, type FileRejection, MIME_TYPES } from '@mantine/dropzone';
 import { notifications } from '@mantine/notifications';
 import { IconFile, IconFileUpload, IconUpload, IconX } from '@tabler/icons-react';
@@ -6,10 +6,21 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { MAX_FILES, MAX_TOTAL_SIZE, uploadFiles } from './api';
+import type { DetectionMode, OutputMode } from './types';
 
 const ACCEPTED_TYPES = [MIME_TYPES.pdf, MIME_TYPES.docx, 'text/plain', 'text/markdown'];
 
 const MAX_TOTAL_MB = MAX_TOTAL_SIZE / 1024 ** 2;
+
+const DETECTION_HELP: Record<DetectionMode, string> = {
+  script: 'Fast, rule-based detection of PII patterns.',
+  ai: 'Runs script mode, then adds an AI check on top to catch PII the rules miss.',
+};
+
+const OUTPUT_HELP: Record<OutputMode, string> = {
+  redact: 'Redacts all PII in the document.',
+  replace: 'Swaps PII for consistent fake data, so the same real value always gets the same fake one.',
+};
 
 const formatSize = (bytes: number) =>
   bytes < 1024 ** 2 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1024 ** 2).toFixed(1)} MB`;
@@ -18,6 +29,8 @@ const warn = (message: string) => notifications.show({ color: 'red', title: 'Can
 
 export function RedactionPage() {
   const [files, setFiles] = useState<File[]>([]);
+  const [detectionMode, setDetectionMode] = useState<DetectionMode>('script');
+  const [outputMode, setOutputMode] = useState<OutputMode>('redact');
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
@@ -93,6 +106,33 @@ export function RedactionPage() {
         <Progress value={usedPercent} color={usedPercent >= 90 ? 'red' : 'indigo'} size="sm" />
       </Paper>
 
+      <Paper withBorder p="md" radius="md">
+        <Stack gap="md">
+          <Stack gap={6}>
+            <Text size="sm" fw={500}>Detection</Text>
+            <SegmentedControl
+              fullWidth
+              value={detectionMode}
+              onChange={v => setDetectionMode(v)}
+              disabled={upload.isPending}
+              data={[{ label: 'Script mode', value: 'script' }, { label: 'AI mode', value: 'ai' }]}
+            />
+            <Text size="xs" c="dimmed">{DETECTION_HELP[detectionMode]}</Text>
+          </Stack>
+          <Stack gap={6}>
+            <Text size="sm" fw={500}>Output</Text>
+            <SegmentedControl
+              fullWidth
+              value={outputMode}
+              onChange={v => setOutputMode(v)}
+              disabled={upload.isPending}
+              data={[{ label: 'Redact mode', value: 'redact' }, { label: 'Replace mode', value: 'replace' }]}
+            />
+            <Text size="xs" c="dimmed">{OUTPUT_HELP[outputMode]}</Text>
+          </Stack>
+        </Stack>
+      </Paper>
+
       {files.length > 0 && (
         <Stack gap="xs">
           {files.map((f, i) => (
@@ -124,7 +164,7 @@ export function RedactionPage() {
         <Button variant="default" disabled={files.length === 0 || upload.isPending} onClick={() => setFiles([])}>
           Clear
         </Button>
-        <Button disabled={files.length === 0} loading={upload.isPending} onClick={() => upload.mutate(files)}>
+        <Button disabled={files.length === 0} loading={upload.isPending} onClick={() => upload.mutate({ files, detectionMode, outputMode })}>
           {files.length > 0 ? `Upload ${files.length} file${files.length === 1 ? '' : 's'}` : 'Upload'}
         </Button>
       </Group>
