@@ -31,3 +31,19 @@ def init_db() -> None:
     import app.models  # noqa: F401  (importing registers the models on Base.metadata)
 
     Base.metadata.create_all(bind=engine)
+
+
+def seed_default_user() -> None:
+    """Create the default dev login if it doesn't exist yet."""
+    from sqlalchemy import select
+
+    from app.core.security import hash_password
+    from app.models import User
+
+    email = settings.default_user_email.lower()
+    if not email or not settings.default_user_password:
+        return
+    with SessionLocal() as db:
+        if db.scalar(select(User).where(User.email == email)) is None:
+            db.add(User(email=email, hashed_password=hash_password(settings.default_user_password)))
+            db.commit()
