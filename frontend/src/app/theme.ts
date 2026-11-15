@@ -1,5 +1,4 @@
 import { createTheme } from '@mantine/core';
-
 /**
  * Look and feel lives here. Mantine turns this object into CSS variables
  * (--mantine-color-lime-6, --mantine-radius-md, ...) and every component reads
@@ -21,6 +20,5 @@ export const theme = createTheme({
   primaryShade: 6, // lime.6 in both light and dark mode
   autoContrast: true, // lime is light, so filled buttons get dark text instead of white
   defaultRadius: 'md',
-  fontFamily: 'Barlow',
-  headings: { fontWeight: '700' },
+  fontFamily: 'Barlow, sans-serif',
 });
