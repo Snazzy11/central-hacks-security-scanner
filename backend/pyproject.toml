@@ -4,9 +4,13 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=5.2.0",
+    "en-core-web-lg",
     "fastapi[standard]>=0.163.0",
     "filetype>=1.2.0",
+    "gliner>=0.2.30",
+    "pandas>=3.1.1",
     "pdfplumber>=0.11.10",
+    "presidio-analyzer>=2.2.366",
     "pwdlib[argon2]>=0.4.0",
     "pydantic-settings>=2.16.3",
     "pyjwt>=2.15.1",
@@ -14,6 +18,7 @@ dependencies = [
     "python-docx>=1.2.0",
     "python-multipart>=0.0.33",
     "sqlalchemy>=2.1.8",
+    "torch>=2.15.0",
 ]
 
 [dependency-groups]
@@ -37,3 +42,6 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.uv.sources]
+en-core-web-lg = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" }

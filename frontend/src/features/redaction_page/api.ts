@@ -14,6 +14,8 @@ export function uploadFiles({ files, detectionMode, outputMode }: RedactionOptio
   return api<UploadedFileList>('/redact/multiple', { method: 'POST', body });
 }
 
+export const fetchBatch = (batchId: string) => api<UploadedFileList>(`/redact/batches/${batchId}`);
+
 /** Fetch the redacted copy (needs the auth header, so a plain link won't work) and save it. */
 export async function downloadFile(file: UploadedFile) {
   const blob = await (await request(`/redact/${file.id}/download`)).blob();
