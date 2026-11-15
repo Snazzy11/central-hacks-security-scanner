@@ -105,13 +105,15 @@ def process_uploads(file_ids: list[int]) -> None:
     with SessionLocal() as db:
         for row in db.scalars(select(UploadedFile).where(UploadedFile.id.in_(file_ids))):
             try:
-                row.output_path = str(process_file(row))
+                result = process_file(row)
+                row.output_path = str(result.output_path)
+                row.summary = result.summary
                 row.status = "completed"
             except Exception:
                 logger.exception("Redaction failed for file %s", row.id)
                 row.status = "failed"
             finally:
-                Path(row.file_path).unlink(missing_ok=True)
+                Path(row.file_path).unlink(missing_ok=True) # This doesnt seem to be actually deleting the files
             db.commit()
 
 
@@ -192,13 +194,10 @@ def get_my_batch(batch_id: str, user: CurrentUser, db: DbSession) -> UploadedFil
     rows = list(db.scalars(query))
     if not rows:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Batch not found")
-    return UploadedFileList(
-        batch_id=batch_id, count=len(rows), files=[UploadedFileRead.model_validate(r) for r in rows]
-    )
+    return UploadedFileList(batch_id=batch_id, count=len(rows), files=[UploadedFileRead.model_validate(r) for r in rows])
 
 
-@router.get("/{file_id}", response_model=UploadedFileRead)
-def get_my_file(file_id: int, user: CurrentUser, db: DbSession) -> UploadedFile:
+def _get_owned(file_id: int, user: CurrentUser, db: DbSession) -> UploadedFile:
     row = db.get(UploadedFile, file_id)
     # 404 (not 403) for other people's files, so ids don't leak what exists
     if row is None or row.owner_id != user.id:
@@ -206,9 +205,14 @@ def get_my_file(file_id: int, user: CurrentUser, db: DbSession) -> UploadedFile:
     return row
 
 
+@router.get("/{file_id}", response_model=UploadedFileRead)
+def get_my_file(file_id: int, user: CurrentUser, db: DbSession) -> UploadedFile:
+    return _get_owned(file_id, user, db)
+
+
 @router.get("/{file_id}/download")
 def download_my_file(file_id: int, user: CurrentUser, db: DbSession) -> FileResponse:
-    row = get_my_file(file_id, user, db)
+    row = _get_owned(file_id, user, db)
     if row.status != "completed" or row.output_path is None:
         raise HTTPException(status.HTTP_409_CONFLICT, f"File is not ready (status: {row.status})")
     suffix = Path(row.output_path).suffix  # the redacted copy keeps the original file type

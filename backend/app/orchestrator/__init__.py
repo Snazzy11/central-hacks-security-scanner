@@ -3,23 +3,35 @@
     read_text -> find_pii -> (rescan, in AI mode) -> build_replacements -> write_redacted
 """
 
+import time
 from pathlib import Path
+from typing import Any, NamedTuple
 
 from app.models import UploadedFile
 from app.orchestrator.documents import read_text, write_redacted
 from app.orchestrator.handle_replacement import build_replacements
+from app.orchestrator.report import build_summary
 
 
-def process_file(file: UploadedFile) -> Path:
-    """Redact one uploaded file using the modes stored on its row. Returns the cleaned file."""
+class Result(NamedTuple):
+    output_path: Path
+    summary: dict[str, Any]  # counts per type and scan stats; no PII, safe to store
+
+
+def process_file(file: UploadedFile) -> Result:
+    """Redact one uploaded file using the modes stored on its row."""
+    started = time.perf_counter()
     path = Path(file.file_path)
-    hits = _find_pii(read_text(path), file.detection_mode, file.output_mode)
+    text = read_text(path)
+    hits = _find_pii(text, file.detection_mode, file.output_mode)
     replacements = build_replacements(hits, file.output_mode)
 
     output_path = path.with_name(f"{path.stem}.redacted{path.suffix}")
     write_redacted(path, output_path, replacements)
     _ensure_pii_removed(output_path, replacements)
-    return output_path
+
+    elapsed_ms = round((time.perf_counter() - started) * 1000)
+    return Result(output_path, build_summary(text, hits, elapsed_ms))
 
 
 def _ensure_pii_removed(output_path: Path, replacements: dict[str, str]) -> None:

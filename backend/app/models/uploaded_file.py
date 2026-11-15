@@ -1,8 +1,8 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import JSON, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, utcnow
@@ -49,6 +49,8 @@ class UploadedFile(Base):
         String(16), default=OutputMode.REDACT, server_default=OutputMode.REDACT
     )
     output_path: Mapped[str | None] = mapped_column(String(1024))  # the redacted copy, once made
+    # What was found (counts per type, scan stats; no PII). See orchestrator/report.py
+    summary: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     # processing -> completed | failed. Poll GET /redact/batches/{batch_id} to follow along.
     status: Mapped[str] = mapped_column(String(32), default="processing")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

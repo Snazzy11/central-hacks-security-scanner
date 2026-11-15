@@ -1,0 +1,89 @@
+/* the one accent: lime, darkened in light mode so it reads on white */
+.page {
+  --pop: var(--mantine-color-lime-8);
+
+  @mixin dark {
+    --pop: var(--mantine-color-lime-5);
+  }
+}
+
+.pop {
+  color: var(--pop);
+}
+
+.headline {
+  font-size: rem(30px);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+/* RollingNumber is a block by default; keep it inside the sentence */
+.inlineNumber {
+  display: inline-flex;
+  vertical-align: bottom;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ what we found: count | label | bar */
+.found {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  column-gap: var(--mantine-spacing-md);
+  row-gap: rem(10px);
+}
+
+.count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.bar {
+  height: rem(10px);
+  border-radius: rem(2px);
+  background: var(--pop);
+  transform-origin: left;
+  transition: transform 800ms ease-out;
+  transition-delay: var(--delay, 0ms);
+}
+
+/* ------------------------------------------------------------ scanning */
+.scanner {
+  position: relative;
+  flex-shrink: 0;
+  width: rem(64px);
+  height: rem(82px);
+  border-radius: rem(4px);
+  border: 1px solid var(--mantine-color-default-border);
+  background: var(--mantine-color-body);
+  padding: rem(10px) rem(9px);
+  overflow: hidden;
+}
+
+.docLine {
+  height: rem(4px);
+  border-radius: rem(2px);
+  margin-bottom: rem(6px);
+  background: var(--mantine-color-default-border);
+}
+
+.laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: rem(2px);
+  background: var(--pop);
+  box-shadow: 0 0 6px var(--pop);
+  animation: sweep 2s ease-in-out infinite alternate;
+}
+
+@keyframes sweep {
+  from { top: 0; }
+  to { top: calc(100% - 2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar { transition: none; }
+  .laser { animation: none; top: 50%; }
+}

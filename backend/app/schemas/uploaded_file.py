@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 from app.models import DetectionMode, OutputMode
@@ -19,6 +21,7 @@ class UploadedFileRead(BaseModel):
     output_mode: OutputMode
     status: str
     created_at: UTCDatetime
+    summary: dict[str, Any] | None = None  # set once completed, see orchestrator/report.py
 
 
 class UploadedFileList(BaseModel):

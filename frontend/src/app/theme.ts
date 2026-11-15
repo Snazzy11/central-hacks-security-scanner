@@ -6,4 +6,5 @@ export const theme = createTheme({
   autoContrast: true,
   defaultRadius: 'md',
   fontFamily: 'Barlow, sans-serif',
+  headings: { fontFamily: 'Barlow, sans-serif', fontWeight: '700' },
 });

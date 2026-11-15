@@ -1,4 +1,4 @@
-import { AppShell, Button, Container, Group, Text } from '@mantine/core';
+import { AppShell, Button, Group, Text } from '@mantine/core';
 import { IconHome } from '@tabler/icons-react';
 import { Link, Outlet } from 'react-router';
 
@@ -20,11 +20,7 @@ export function AppLayout() {
             <Button component={Link} to="/" variant="default" leftSection={<IconHome size={16} />}>
               Home
             </Button>
-            <Button
-              onClick={() => window.location.assign('/api/redact')}
-            >
-              Redact My Files
-            </Button>
+            <Button component={Link} to="/redact">Redact My Files</Button>
           </Group>
           <Group>
             <Text size="sm" c="dimmed">{user?.email}</Text>
@@ -35,9 +31,8 @@ export function AppLayout() {
       </AppShell.Header>
 
       <AppShell.Main>
-        <Container size="sm">
-          <Outlet />
-        </Container>
+        {/* Pages pick their own width with <Container size=...> */}
+        <Outlet />
       </AppShell.Main>
     </AppShell>
   );
