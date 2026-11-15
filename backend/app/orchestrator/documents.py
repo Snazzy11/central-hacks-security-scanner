@@ -28,7 +28,7 @@ from docx.table import _Cell
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
-from backend.app.orchestrator.handle_replacement import replace_all, replacement_pattern
+from app.orchestrator.handle_replacement import replace_all, replacement_pattern
 
 Replacements = dict[str, str]  # {original text: replacement}
 
