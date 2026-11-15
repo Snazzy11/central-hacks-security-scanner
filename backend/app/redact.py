@@ -141,8 +141,8 @@ def replace_text(text_data: dict | list[dict]) -> dict:
 
 
 
-# entity type -> (singular, plural) for the readable message
-_DISPLAY_NAMES = {
+# Every entity type the pipeline can find -> (singular, plural), for messages and settings screens
+DISPLAY_NAMES = {
     "PHONE_NUMBER": ("phone number", "phone numbers"),
     "US_SSN": ("social security number", "social security numbers"),
     "PERSON": ("name", "names"),
@@ -158,10 +158,16 @@ _DISPLAY_NAMES = {
 
 
 def _display_name(entity_type, count):
-    singular, plural = _DISPLAY_NAMES.get(
+    singular, plural = DISPLAY_NAMES.get(
         entity_type, (entity_type.replace("_", " ").lower(),) * 2
     )
     return singular if count == 1 else plural
+
+
+def entity_label(entity_type):
+    """'PHONE_NUMBER' -> 'Phone number'. Only the first letter changes, so 'IBAN' stays 'IBAN'."""
+    singular = _display_name(entity_type, 1)
+    return singular[0].upper() + singular[1:]
 
 
 def summarize(hits):
@@ -179,7 +185,7 @@ def summarize(hits):
 
 
 
-def _resolve_overlaps(hits):
+def resolve_overlaps(hits):
     """Keep one hit per overlapping region: higher score wins, then longer span."""
     chosen = []
     for h in sorted(hits, key=lambda h: (-h.get("score", 0), -(h["end"] - h["start"]), h["start"])):
@@ -201,7 +207,7 @@ def anonymize(text, hits, mode=None):
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
 
-    applied = _resolve_overlaps(hits)
+    applied = resolve_overlaps(hits)
 
     # one fake value per id, so repeats of the same value stay consistent
     fakes = replace_text([h for h in applied if h.get("id")]) if mode == "replace" else {}

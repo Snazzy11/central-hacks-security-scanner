@@ -8,6 +8,13 @@ export interface RedactionOptions {
   outputMode: OutputMode;
 }
 
+// What the server can process; see GET /api/redact/capabilities
+export interface Capabilities {
+  entities: { id: string; label: string }[];
+  file_types: string[]; // extensions, e.g. ".pdf"
+  max_file_size: number;
+}
+
 export interface UploadedFile {
   id: number;
   original_filename: string;

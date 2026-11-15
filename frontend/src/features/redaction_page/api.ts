@@ -1,6 +1,6 @@
 import { api, request } from '@/lib/api';
 
-import type { RedactionOptions, UploadedFile, UploadedFileList } from './types';
+import type { Capabilities, RedactionOptions, UploadedFile, UploadedFileList } from './types';
 
 // Keep these in sync with MAX_FILES / MAX_TOTAL_SIZE in backend/app/api/routes/redact.py
 export const MAX_FILES = 20;
@@ -13,6 +13,9 @@ export function uploadFiles({ files, detectionMode, outputMode }: RedactionOptio
   for (const file of files) body.append('files', file);
   return api<UploadedFileList>('/redact/multiple', { method: 'POST', body });
 }
+
+// get accepted types from api
+export const fetchCapabilities = () => api<Capabilities>('/redact/capabilities');
 
 export const fetchBatch = (batchId: string) => api<UploadedFileList>(`/redact/batches/${batchId}`);
 

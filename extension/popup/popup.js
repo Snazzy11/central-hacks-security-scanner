@@ -1,16 +1,24 @@
 (async function () {
   'use strict';
   const D = globalThis.PIIDetectors;
+  const Settings = globalThis.PIISettings;
   const { SITE_URL } = globalThis.PIIConfig;
   const $ = (id) => document.getElementById(id);
 
-  const DEFAULTS = {
-    mode: 'ask', enabled: { ...D.DEFAULT_ENABLED }, stripMetadata: true, warnUnsupported: true,
-    checkPaste: true, disabledSites: [],
-  };
-  const MODE_HINTS = {
-    ask: 'Shows what was found and lets you choose before anything is uploaded or pasted.',
-    auto: 'Redacts straight away and shows a short notice.',
+  // Same wording as the web app's redaction page, where it applies.
+  const HINTS = {
+    mode: {
+      ask: 'Shows what was found and lets you choose before anything is uploaded or pasted.',
+      auto: 'Redacts straight away and shows a short notice.',
+    },
+    detectionMode: {
+      script: 'Fast, scripted detection of PII.',
+      ai: 'Runs script mode, then an AI layer that catches more PII. Takes much longer.',
+    },
+    outputMode: {
+      redact: 'Blanks out PII.',
+      replace: 'Swaps PII for fake data, consistent for each person, phone number, etc.',
+    },
   };
 
   const openTab = (path) => chrome.tabs.create({ url: SITE_URL + path });
@@ -62,9 +70,8 @@
 
   // ---- Settings -----------------------------------------------------------
 
-  const { settings: stored } = await chrome.storage.sync.get('settings');
-  const settings = { ...DEFAULTS, ...(stored || {}), enabled: { ...DEFAULTS.enabled, ...((stored && stored.enabled) || {}) } };
-  const save = () => chrome.storage.sync.set({ settings });
+  const settings = await Settings.load();
+  const save = () => Settings.save(settings);
 
   let host = '';
   try {
@@ -85,13 +92,24 @@
     $('siteRow').hidden = true;
   }
 
-  const modeButtons = document.querySelectorAll('.seg button');
-  const renderMode = () => {
-    modeButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === settings.mode)));
-    $('modeHint').textContent = MODE_HINTS[settings.mode];
-  };
-  modeButtons.forEach((b) => b.addEventListener('click', () => { settings.mode = b.dataset.mode; renderMode(); save(); }));
-  renderMode();
+  for (const group of document.querySelectorAll('.seg')) {
+    const key = group.dataset.setting;
+    const buttons = group.querySelectorAll('button');
+    const render = () => {
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === settings[key])));
+      document.querySelector(`[data-hint-for="${key}"]`).textContent = HINTS[key][settings[key]];
+    };
+    buttons.forEach((b) => b.addEventListener('click', () => { settings[key] = b.dataset.value; render(); save(); }));
+    render();
+  }
+
+  for (const key of ['checkPaste', 'warnUnsupported']) {
+    const box = $(key);
+    box.checked = settings[key];
+    box.addEventListener('change', () => { settings[key] = box.checked; save(); });
+  }
+
+  // ---- What to look for -----------------------------------------------------
 
   const makeSwitch = (text, checked, onChange) => {
     const label = document.createElement('label');
@@ -107,16 +125,31 @@
     label.append(name, box, track);
     return label;
   };
-  for (const det of D.DETECTORS) {
-    $('detectors').append(makeSwitch(det.label, settings.enabled[det.id] !== false, (on) => {
-      settings.enabled[det.id] = on;
-      save();
-    }));
+
+  /** The server's entity types when signed in (that's what checks files); our own detectors' otherwise. */
+  async function entityTypes(signedIn) {
+    if (signedIn) {
+      const reply = await chrome.runtime.sendMessage({ type: 'getCapabilities' }).catch(() => null);
+      if (reply?.ok) return reply.data.entities;
+    }
+    return D.DETECTORS.map(({ id, label }) => ({ id, label }));
   }
 
-  for (const key of ['checkPaste', 'stripMetadata', 'warnUnsupported']) {
-    const box = $(key);
-    box.checked = settings[key];
-    box.addEventListener('change', () => { settings[key] = box.checked; save(); });
+  async function renderDetectors(signedIn) {
+    const switches = (await entityTypes(signedIn)).map(({ id, label }) => makeSwitch(
+      label,
+      !settings.disabledTypes.includes(id),
+      (on) => {
+        settings.disabledTypes = settings.disabledTypes.filter((type) => type !== id);
+        if (!on) settings.disabledTypes.push(id);
+        save();
+      },
+    ));
+    $('detectors').replaceChildren(...switches);
   }
+  await renderDetectors(auth);
+  chrome.storage.onChanged.addListener((changes, area) => {
+    const signedInChanged = area === 'local' && changes.auth && !changes.auth.oldValue !== !changes.auth.newValue;
+    if (signedInChanged) void renderDetectors(changes.auth.newValue);
+  });
 })();

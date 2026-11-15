@@ -50,9 +50,10 @@ export function ExtensionPage() {
           <Stack gap="xs">
             <Title order={1}>Install the browser extension</Title>
             <Text c="dimmed">
-              It checks files and pasted text before a website gets them, and lets you redact PII first. It all runs
-              in your browser. It's not on the Chrome Web Store yet, so you load it through developer mode. Takes
-              about a minute.
+              It checks files and pasted text before a website gets them, and lets you redact PII first. While you're
+              signed in, it uses the same detection as this site: uploads are checked on the server and sent
+              back without saving data. It's not on the Chrome Web Store, so you have to load it with developer mode.
+              Takes about a minute.
             </Text>
           </Stack>
 
@@ -108,16 +109,18 @@ export function ExtensionPage() {
             <Timeline.Item bullet={5} title="Pin it and sign in">
               <Text size="sm" c="dimmed" mt={4}>
                 Click the puzzle-piece icon in the toolbar and pin <b>PiiShooter</b>. Open it and click{' '}
-                <b>Log in</b> to sign in with your PiiShooter account. If you're already logged in on this site, the
-                extension picks that up on its own, and logging out of either one logs out both.
+                <b>Log in</b> to sign in with your PiiShooter account. Files are only checked while you're signed in. If
+                you're already logged in on this site, the extension picks that up on its own, and logging out of either
+                one logs out both.
               </Text>
             </Timeline.Item>
 
             <Timeline.Item bullet={6} title="Try it out">
               <Text size="sm" c="dimmed" mt={4}>
-                Upload a text or Office file, or paste an email address or phone number into any site. It shows
+                Upload a PDF, Word or text file, or paste an email address or phone number into any site. It shows
                 what it found and lets you redact it first. From the extension's menu you can make it redact
-                automatically, pick what to look for, or turn it off for certain sites.
+                automatically, switch to AI mode or fake data, pick what to look for, or turn it off for certain
+                sites.
               </Text>
             </Timeline.Item>
           </Timeline>

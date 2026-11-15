@@ -1,35 +1,39 @@
-// Intercepts files handed to the page (file picker, drag-and-drop, paste) and pasted text,
-// scans them for PII, and lets the user redact before the page sees them.
+// Intercepts files any files uploaded to a page or pasted text
+// Then check them for PII and stop it before it even touches the page
+
 (function () {
   'use strict';
   if (window.__piiUploadFilter) return;
   window.__piiUploadFilter = true;
 
   const D = globalThis.PIIDetectors;
-  const S = globalThis.PIIScanner;
+  const Settings = globalThis.PIISettings;
 
-  const DEFAULT_SETTINGS = {
-    mode: 'ask',               // 'ask' = show dialog, 'auto' = redact silently and show a notice
-    enabled: { ...D.DEFAULT_ENABLED },
-    stripMetadata: true,       // clear author names from Office document properties
-    warnUnsupported: true,     // tell the user when a document (e.g. PDF) couldn't be checked
-    checkPaste: true,          // also check text pasted into inputs and editors
-    disabledSites: [],
-  };
-  const LABELS = Object.fromEntries(D.DETECTORS.map((d) => [d.id, d.label]));
-  LABELS.METADATA = 'Author name (document properties)';
+  // Chrome caps a message between extension parts at 64 MiB
+  // base64 increases file size
+  const MAX_MESSAGE_FILE_BYTES = 40 * 1024 * 1024;
+  // Don't force pasting to wait if the server is too slow
+  const PASTE_SERVER_TIMEOUT_MS = 5000;
+  // Only show "Checking…" if it takes enough time to be confusing
+  const PROGRESS_DELAY_MS = 600;
 
-  let settings = DEFAULT_SETTINGS;
-  const ready = chrome.storage.sync.get('settings').then(({ settings: s }) => {
-    settings = mergeSettings(s);
-  }).catch(() => {});
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'sync' && changes.settings) settings = mergeSettings(changes.settings.newValue);
-  });
-  function mergeSettings(s) {
-    return { ...DEFAULT_SETTINGS, ...(s || {}), enabled: { ...DEFAULT_SETTINGS.enabled, ...((s && s.enabled) || {}) } };
-  }
+  let settings = Settings.DEFAULTS;
+  const ready = Settings.load().then((loaded) => { settings = loaded; }).catch(() => {});
+  Settings.onChange((changed) => { settings = changed; });
   const siteDisabled = () => settings.disabledSites.includes(location.hostname);
+
+  // What the server supports (saved by src/background.js). Until it's known, only our own
+  // detectors' labels are available, and every file is sent for the server to decide.
+  let capabilities = null;
+  chrome.storage.local.get('capabilities').then((stored) => { capabilities = stored.capabilities ?? null; });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.capabilities) capabilities = changes.capabilities.newValue ?? null;
+  });
+  const LOCAL_LABELS = Object.fromEntries(D.DETECTORS.map((d) => [d.id, d.label]));
+  function labelFor(type) {
+    const known = capabilities?.entities.find((entity) => entity.id === type);
+    return known?.label ?? LOCAL_LABELS[type] ?? type;
+  }
 
   // Media files are passed straight through; everything else gets inspected.
   const isMedia = (f) => /^(image|video|audio)\//.test(f.type);
@@ -39,9 +43,10 @@
   async function processFiles(files) {
     await ready;
     if (siteDisabled()) return files;
+    const finishProgress = showProgress('PiiShooter is checking your upload…');
     const results = await Promise.all(files.map((f) => (isMedia(f)
       ? { file: f, status: 'clean', findings: [] }
-      : S.scanFile(f, settings))));
+      : scanFile(f)))).finally(finishProgress);
     const withPII = results.filter((r) => r.status === 'pii');
     const unchecked = settings.warnUnsupported ? results.filter((r) => r.status === 'unsupported') : [];
     if (!withPII.length && !unchecked.length) return files;
@@ -56,7 +61,42 @@
     }
     if (choice === 'cancel') return null;
     if (choice === 'original') return files;
-    return Promise.all(results.map((r) => (r.status === 'pii' ? r.redact() : r.file)));
+    return results.map((r) => (r.status === 'pii' ? r.cleaned : r.file));
+  }
+
+  /**
+   * Have the server check one file.
+   * @returns {Promise<{file, status: 'clean'|'pii'|'unsupported', reason?, findings, cleaned?: File}>}
+   */
+  async function scanFile(file) {
+    const unchecked = (reason) => ({ file, status: 'unsupported', reason, findings: [] });
+    const extension = (file.name.match(/\.[^.]+$/) || [''])[0].toLowerCase();
+    if (capabilities && !capabilities.file_types.includes(extension)) return unchecked('this type of file can’t be checked');
+    if (file.size > Math.min(MAX_MESSAGE_FILE_BYTES, capabilities?.max_file_size ?? Infinity)) return unchecked('it’s too large to check');
+
+    const reply = await sendToWorker({
+      type: 'scanFile',
+      name: file.name,
+      mimeType: file.type,
+      base64: new Uint8Array(await file.arrayBuffer()).toBase64(),
+      settings,
+    });
+    if (!reply.ok) return unchecked(reply.reason);
+
+    const { findings, file_base64: cleanedBase64 } = reply.data;
+    if (!findings.length) return { file, status: 'clean', findings };
+    const cleaned = new File([Uint8Array.fromBase64(cleanedBase64)], file.name, { type: file.type, lastModified: file.lastModified });
+    return { file, status: 'pii', findings, cleaned };
+  }
+
+  /** Message src/background.js. Resolves to { ok, data } or { ok: false, reason }, never rejects. */
+  async function sendToWorker(message) {
+    try {
+      return await chrome.runtime.sendMessage(message);
+    } catch {
+      // The extension was reloaded or updated, and this page still runs the old content script.
+      return { ok: false, reason: 'PiiShooter was updated, so reload this page' };
+    }
   }
 
   // ---- Interception -------------------------------------------------------
@@ -140,9 +180,10 @@
   }, true);
 
   // ---- Pasted text ----------------------------------------------------------
-  // Text pastes are checked synchronously (findPII is plain regex), so the paste is only
-  // blocked when something was actually found. The page then gets a synthetic paste with the
-  // chosen text; if nothing on the page handles it, we insert the text like a normal paste.
+  // The paste handler must decide right away whether to block, so the local regexes decide, and
+  // a paste is only blocked when they find something. Once blocked, the server redacts it if it
+  // can (it also finds names, and can swap in fake data). The page then gets a synthetic paste
+  // with the chosen text; if nothing on the page handles it, we insert it like a normal paste.
 
   const TEXT_INPUT = /^(text|search|email|url|tel|password)$/;
   function isEditable(node) {
@@ -180,9 +221,7 @@
     const target = e.composedPath()[0];
     if (!isEditable(target)) return;
     const text = e.clipboardData.getData('text/plain');
-    if (!text) return;
-    const findings = D.findPII(text, settings.enabled);
-    if (!findings.length) return;
+    if (!text || !D.findPII(text, settings.disabledTypes).length) return;
 
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -190,22 +229,32 @@
     const original = e.clipboardData.types
       .filter((t) => t !== 'Files')
       .map((t) => [t, e.clipboardData.getData(t)]);
-    const redacted = D.redactText(text, findings);
     const restoreCaret = saveCaret(target);
 
-    let decision;
-    if (settings.mode === 'auto') {
-      toast(`PiiShooter redacted ${findings.length} item${findings.length === 1 ? '' : 's'} from your paste`);
-      decision = Promise.resolve('redact');
-    } else {
-      decision = showPasteDialog(findings, redacted);
-    }
-    decision.then((choice) => {
+    cleanPastedText(text).then(async ({ text: redacted, findings }) => {
+      let choice;
+      if (!findings.length) {
+        choice = 'original'; // the server took a closer look and found nothing after all
+      } else if (settings.mode === 'auto') {
+        toast(`PiiShooter redacted ${findings.length} item${findings.length === 1 ? '' : 's'} from your paste`);
+        choice = 'redact';
+      } else {
+        choice = await showPasteDialog(findings, redacted);
+      }
       restoreCaret();
       if (choice === 'cancel') return;
       const formats = choice === 'redact' ? [['text/plain', redacted]] : original;
       deliverPaste(target, formats, choice === 'redact' ? redacted : text);
     }).catch((err) => console.error('[PiiShooter]', err));
+  }
+
+  /** The server's redaction if it answers in time, otherwise ours. Same shape either way. */
+  async function cleanPastedText(text) {
+    const finishProgress = showProgress('PiiShooter is checking your paste…');
+    const timeout = new Promise((resolve) => { setTimeout(resolve, PASTE_SERVER_TIMEOUT_MS, { ok: false }); });
+    const reply = await Promise.race([sendToWorker({ type: 'scanText', text, settings }), timeout]);
+    finishProgress();
+    return reply.ok ? reply.data : D.redact(text, settings.disabledTypes);
   }
 
   function deliverPaste(target, formats, plain) {
@@ -298,13 +347,13 @@
   function summarize(findings) {
     const counts = {};
     for (const f of findings) counts[f.type] = (counts[f.type] || 0) + 1;
-    return Object.entries(counts).map(([t, n]) => `${n} × ${LABELS[t] || t}`).join(', ');
+    return Object.entries(counts).map(([t, n]) => `${n} × ${labelFor(t)}`).join(', ');
   }
 
   function findingList(findings) {
     const items = el('ul', { class: 'items' });
     findings.slice(0, 6).forEach((f) => items.append(
-      el('li', {}, `${LABELS[f.type] || f.type}: `, el('code', {}, D.maskForDisplay(f.value)))));
+      el('li', {}, `${labelFor(f.type)}: `, el('code', {}, D.maskForDisplay(f.value)))));
     if (findings.length > 6) items.append(el('li', {}, `…and ${findings.length - 6} more`));
     return items;
   }
@@ -368,25 +417,46 @@
   }
 
   function showPasteDialog(findings, redacted) {
-    // Preview of what will be pasted, with each redaction highlighted. Long text is cut short.
-    const preview = el('div', { class: 'preview' });
+    // Preview of what will be pasted, with each replacement highlighted. Long text is cut short.
     const shown = redacted.length > 600 ? `${redacted.slice(0, 600)}…` : redacted;
-    shown.split(/(\[REDACTED:[A-Z_]+\])/).forEach((part, i) => preview.append(i % 2 ? el('mark', {}, part) : part));
+    const preview = el('div', { class: 'preview' }, ...highlightReplacements(shown, findings));
     const box = el('div', { class: 'item' },
       el('div', { class: 'status pii' }, `Found ${summarize(findings)}`),
       findingList(findings),
       preview);
     return openDialog({
       title: 'Personal information in your paste',
-      sub: `You're pasting into ${location.hostname || 'this page'}. The highlighted parts will be removed.`,
+      sub: `You're pasting into ${location.hostname || 'this page'}. The highlighted parts replace what was found.`,
       body: box,
       buttons: [['cancel', 'Cancel'], ['original', 'Paste original'], ['redact', 'Paste redacted', true]],
     });
   }
 
-  function toast(message) {
+  /** `text` as a list of strings and <mark>s, with every replacement value marked. */
+  function highlightReplacements(text, findings) {
+    const replacements = [...new Set(findings.map((f) => f.replacement))]
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length); // longest first, so a short one never splits a longer one
+    if (!replacements.length) return [text];
+    const pattern = new RegExp(`(${replacements.map(RegExp.escape).join('|')})`);
+    // Splitting on a capturing group puts the matches at the odd indexes.
+    return text.split(pattern).map((part, i) => (i % 2 ? el('mark', {}, part) : part));
+  }
+
+  function toast(message, durationMs = 5000) {
     const { host, root } = mount();
     root.append(el('div', { class: 'toast', role: 'status' }, message));
-    setTimeout(() => host.remove(), 5000);
+    if (durationMs) setTimeout(() => host.remove(), durationMs);
+    return () => host.remove();
+  }
+
+  /** Shows `message` if the work takes long enough to notice. Call the returned function when done. */
+  function showProgress(message) {
+    let hideToast = null;
+    const timer = setTimeout(() => { hideToast = toast(message, 0); }, PROGRESS_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+      if (hideToast) hideToast();
+    };
   }
 })();

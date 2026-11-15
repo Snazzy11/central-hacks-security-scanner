@@ -1,21 +1,13 @@
 import { ActionIcon, Button, Container, Group, Paper, Progress, SegmentedControl, Stack, Text, Title } from '@mantine/core';
-import { Dropzone, type FileRejection, MIME_TYPES } from '@mantine/dropzone';
+import { Dropzone, type FileRejection } from '@mantine/dropzone';
 import { notifications } from '@mantine/notifications';
 import { IconFile, IconFileUpload, IconUpload, IconX } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { MAX_FILES, MAX_TOTAL_SIZE, uploadFiles } from './api';
+import { fetchCapabilities, MAX_FILES, MAX_TOTAL_SIZE, uploadFiles } from './api';
 import type { DetectionMode, OutputMode } from './types';
-
-// Keep in sync with ALLOWED_EXTENSIONS in backend/app/api/routes/redact.py
-const ACCEPTED_TYPES = {
-  [MIME_TYPES.pdf]: ['.pdf'],
-  [MIME_TYPES.docx]: ['.docx'],
-  'text/plain': ['.txt'],
-  'text/markdown': ['.md'],
-};
 
 const MAX_TOTAL_MB = MAX_TOTAL_SIZE / 1024 ** 2;
 
@@ -34,12 +26,27 @@ const formatSize = (bytes: number) =>
 
 const warn = (message: string) => notifications.show({ color: 'red', title: 'Cannot add files', message });
 
+const extensionOf = (name: string) => name.slice(name.lastIndexOf('.')).toLowerCase();
+const describeTypes = (fileTypes: string[]) => fileTypes.map(type => type.slice(1).toUpperCase()).join(', ');
+
 export function RedactionPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [detectionMode, setDetectionMode] = useState<DetectionMode>('script');
   const [outputMode, setOutputMode] = useState<OutputMode>('redact');
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+
+  // The file types come from the backend, so this page never offers one the server would refuse.
+  const { data: capabilities } = useQuery({ queryKey: ['redact', 'capabilities'], queryFn: fetchCapabilities, staleTime: Infinity });
+  const fileTypes = capabilities?.file_types ?? [];
+  const typeList = describeTypes(fileTypes);
+
+  // Checking the extension ourselves, rather than through `accept`: `accept` lets in anything
+  // with a matching MIME type, so 'text/plain' would also let in .py or .c files.
+  const validateType = (file: File) =>
+    fileTypes.includes(extensionOf(file.name))
+      ? null
+      : { code: 'file-invalid-type', message: `Unsupported file type: ${file.name}` };
 
   const navigate = useNavigate();
   const upload = useMutation({
@@ -63,7 +70,7 @@ export function RedactionPage() {
   };
 
   const onReject = (rejections: FileRejection[]) =>
-    warn(`Unsupported file: ${rejections.map(r => r.file.name).join(', ')}. Use PDF, DOCX, TXT or MD.`);
+    warn(`Unsupported file: ${rejections.map(r => r.file.name).join(', ')}. Supported types: ${typeList}.`);
 
   const atLimit = files.length >= MAX_FILES || totalSize >= MAX_TOTAL_SIZE;
   const usedPercent = Math.min(100, (totalSize / MAX_TOTAL_SIZE) * 100);
@@ -75,8 +82,9 @@ export function RedactionPage() {
         <Dropzone
           onDrop={addFiles}
           onReject={onReject}
-          accept={ACCEPTED_TYPES}
-          loading={upload.isPending}
+          validator={validateType}
+          inputProps={{ accept: fileTypes.join(',') }}
+          loading={upload.isPending || !capabilities}
           p="xl"
           styles={fileInputStyle}
         >
@@ -92,7 +100,10 @@ export function RedactionPage() {
             </Dropzone.Idle>
             <Text size="lg" fw={600}>Drag files here or click to browse</Text>
             <Text size="sm" c="dimmed" ta="center">
-              {`PDF, DOCX, TXT or MD · up to ${MAX_FILES} files · ${MAX_TOTAL_MB} MB total`}
+              {typeList}
+            </Text>
+            <Text size="sm" c="dimmed" ta="center">
+              {`Up to ${MAX_FILES} files · ${MAX_TOTAL_MB} MB total`}
             </Text>
           </Stack>
         </Dropzone>

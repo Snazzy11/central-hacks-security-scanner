@@ -1,8 +1,10 @@
 import asyncio
+import base64
 import hashlib
 import logging
 import uuid
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
@@ -12,7 +14,17 @@ from sqlalchemy import select
 from app.api.deps import CurrentUser
 from app.db.session import DbSession, SessionLocal
 from app.models import DetectionMode, OutputMode, UploadedFile
-from app.orchestrator import process_file
+from app.orchestrator import Finding, clean_file, clean_text, process_file
+from app.orchestrator.documents import SUPPORTED_EXTENSIONS
+from app.redact import DISPLAY_NAMES, entity_label
+from app.schemas.redaction import (
+    Capabilities,
+    EntityType,
+    FileCleanResult,
+    TextCleanRequest,
+    TextCleanResult,
+)
+from app.schemas.redaction import Finding as FindingOut
 from app.schemas.uploaded_file import UploadedFileList, UploadedFileRead
 
 router = APIRouter(prefix="/redact", tags=["redact"])
@@ -23,12 +35,12 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 MAX_TOTAL_SIZE = 50 * 1024 * 1024  # 50 MiB, combined across all files in one request
 MAX_FILES = 20
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md"}
 
 
-# Form fields shared by both upload endpoints (the files themselves are multipart too).
+# Form fields shared by the upload endpoints (the files themselves are multipart too).
 DetectionModeForm = Annotated[DetectionMode, Form()]
 OutputModeForm = Annotated[OutputMode, Form()]
+EntitiesForm = Annotated[list[str] | None, Form()]  # which types to look for; leave out for all
 
 
 async def save_upload(
@@ -40,58 +52,62 @@ async def save_upload(
     max_size: int = MAX_TOTAL_SIZE,
 ) -> UploadedFile:
     """Validate and store one upload on disk. Returns an UploadedFile row that the caller
-    must add to the session. `max_size` is how many bytes this file may use. Removes the partial file if anything fails."""
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file selected")
-
-    # get file extension and check it is allowed
-    extension = Path(file.filename).suffix.lower()
-    if extension not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type: {file.filename}"
-        )
-
-    # Generate a uuid
+    must add to the session. `max_size` is how many bytes this file may use."""
+    extension = _checked_extension(file.filename)
     filename = f"{uuid.uuid4()}{extension}"
     file_path = UPLOAD_DIR / filename
-
-    size = 0
-    digest = hashlib.sha256()
-
-    try:
-        with file_path.open("wb") as buffer:
-            while chunk := await file.read(1024 * 1024):
-                size += len(chunk)
-
-                if size > max_size:
-                    raise HTTPException(
-                        status_code=413,
-                        detail="Upload exceeds the 50 MB total size limit"
-                    )
-
-                digest.update(chunk)
-                await asyncio.to_thread(buffer.write, chunk)
-
-    except Exception:
-        await asyncio.to_thread(file_path.unlink, missing_ok=True)
-        raise
-
-    finally:
-        await file.close()
+    size, sha256 = await _write_upload(file, file_path, max_size)
 
     return UploadedFile(
-        original_filename=Path(file.filename).name[:255],
+        original_filename=Path(file.filename or "").name[:255],
         stored_filename=filename,
         file_path=str(file_path),
         mime_type=file.content_type,
         size=size,
-        sha256=digest.hexdigest(),
+        sha256=sha256,
         detection_mode=detection_mode,
         output_mode=output_mode,
         batch_id=batch_id,
         owner_id=owner_id,
     )
+
+
+def _checked_extension(filename: str | None) -> str:
+    """The file's extension, if it's a type the pipeline can handle."""
+    if not filename:
+        raise HTTPException(status_code=400, detail="No file selected")
+    extension = Path(filename).suffix.lower()
+    if extension not in SUPPORTED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {filename}")
+    return extension
+
+
+async def _write_upload(file: UploadFile, destination: Path, max_size: int) -> tuple[int, str]:
+    """Stream the upload to `destination` and return its size and sha256.
+    Removes the partial file if anything fails."""
+    size = 0
+    digest = hashlib.sha256()
+    try:
+        with destination.open("wb") as buffer:
+            while chunk := await file.read(1024 * 1024):
+                size += len(chunk)
+                if size > max_size:
+                    raise HTTPException(status_code=413, detail="Upload exceeds the 50 MB total size limit")
+                digest.update(chunk)
+                await asyncio.to_thread(buffer.write, chunk)
+    except Exception:
+        await asyncio.to_thread(destination.unlink, missing_ok=True)
+        raise
+    finally:
+        await file.close()
+    return size, digest.hexdigest()
+
+
+def _checked_entities(entities: list[str] | None) -> list[str] | None:
+    unknown = set(entities or ()) - DISPLAY_NAMES.keys()
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown entity types: {', '.join(sorted(unknown))}")
+    return entities
 
 
 async def _discard(rows: list[UploadedFile]) -> None:
@@ -171,6 +187,73 @@ async def upload_multiple_files(
     return UploadedFileList(
         batch_id=batch_id, count=len(saved), files=[UploadedFileRead.model_validate(r) for r in saved]
     )
+
+
+# ---- Instant endpoints --------------------------------------------------------
+# For the browser extension. A website is waiting for the file while these run, so they answer
+# straight away instead of returning 202 and making the client poll. Nothing is saved: files
+# caught on other websites don't belong in the user's history, and nothing stays on disk.
+
+
+@router.get("/capabilities", response_model=Capabilities)
+def get_capabilities() -> Capabilities:
+    """What the instant endpoints accept, so clients don't keep their own copy of these lists."""
+    return Capabilities(
+        entities=[EntityType(id=entity, label=entity_label(entity)) for entity in DISPLAY_NAMES],
+        file_types=sorted(SUPPORTED_EXTENSIONS),
+        max_file_size=MAX_TOTAL_SIZE,
+    )
+
+
+@router.post("/instant", response_model=FileCleanResult)
+async def clean_file_now(
+    file: UploadFile = File(...),
+    detection_mode: DetectionModeForm = DetectionMode.SCRIPT,
+    output_mode: OutputModeForm = OutputMode.REDACT,
+    entities: EntitiesForm = None,
+) -> FileCleanResult:
+    """Clean one file and send it back in the response."""
+    extension = _checked_extension(file.filename)
+    entities = _checked_entities(entities)
+
+    with TemporaryDirectory() as folder:
+        source = Path(folder) / f"original{extension}"
+        await _write_upload(file, source, MAX_TOTAL_SIZE)
+        try:
+            result = await asyncio.to_thread(
+                clean_file, source, Path(folder) / f"cleaned{extension}", detection_mode, output_mode, entities
+            )
+        except Exception:
+            logger.exception("Instant redaction failed for %s", file.filename)
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "This file could not be checked") from None
+        cleaned = base64.b64encode(result.output_path.read_bytes()).decode() if result.findings else None
+
+    return FileCleanResult(
+        filename=file.filename or "",
+        findings=_findings_out(result.findings),
+        summary=result.summary,
+        file_base64=cleaned,
+    )
+
+
+@router.post("/text", response_model=TextCleanResult)
+def clean_text_now(request: TextCleanRequest) -> TextCleanResult:
+    """Clean a piece of text, e.g. something about to be pasted into a website."""
+    try:
+        result = clean_text(
+            request.text, request.detection_mode, request.output_mode, _checked_entities(request.entities)
+        )
+    except RuntimeError:
+        logger.exception("Instant redaction failed for pasted text")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "This text could not be checked") from None
+    return TextCleanResult(text=result.text, findings=_findings_out(result.findings), summary=result.summary)
+
+
+def _findings_out(findings: list[Finding]) -> list[FindingOut]:
+    return [FindingOut(type=f.entity_type, value=f.value, replacement=f.replacement) for f in findings]
+
+
+# ---- Reading back stored uploads ------------------------------------------------
 
 
 @router.get("", response_model=list[UploadedFileRead])
