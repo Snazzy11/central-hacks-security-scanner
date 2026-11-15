@@ -1,13 +1,11 @@
 import {
   ActionIcon,
-  Alert,
   Box,
   Button,
   Code,
   Container,
   CopyButton,
   Group,
-  List,
   Paper,
   Stack,
   Text,
@@ -23,7 +21,6 @@ import {
   IconDownload,
   IconFileZip,
   IconFolderOpen,
-  IconInfoCircle,
   IconPin,
   IconPuzzle,
   IconShieldCheck,
@@ -211,43 +208,6 @@ export function ExtensionPage() {
               </Text>
             </Timeline.Item>
           </Timeline>
-
-          <Alert variant="light" icon={<IconInfoCircle />} title="Good to know">
-            <List size="sm" spacing={4}>
-              <List.Item>
-                Chrome may show a "Disable developer mode extensions" message when it starts. Click
-                {' '}
-                <b>Keep</b>
-                {' '}
-                or close it. This is normal for extensions that aren't from the store.
-              </List.Item>
-              <List.Item>
-                To update, download the zip again, replace the folder's contents, and click the ↻ reload icon on
-                the extension's card in
-                {' '}
-                <Code>{EXTENSIONS_PAGE}</Code>
-                .
-              </List.Item>
-              <List.Item>
-                To use it on local
-                {' '}
-                <Code>file://</Code>
-                {' '}
-                pages, open the extension's
-                {' '}
-                <b>Details</b>
-                {' '}
-                and turn on
-                {' '}
-                <b>Allow access to file URLs</b>
-                .
-              </List.Item>
-              <List.Item>
-                It checks text you paste plus plain-text, .docx, .xlsx and .pptx files. PDFs and images are
-                passed through without being checked. It stays off on this website, which redacts files itself.
-              </List.Item>
-            </List>
-          </Alert>
         </Stack>
       </Container>
     </Box>
