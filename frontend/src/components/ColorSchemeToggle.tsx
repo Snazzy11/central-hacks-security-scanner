@@ -15,7 +15,3 @@ export function ColorSchemeToggle() {
     </ActionIcon>
   );
 }
-
-export function getColorScheme() {
-  return ColorSchemeToggle();
-}

@@ -1,6 +1,6 @@
 import { Anchor, Box, Button, Container, Group, List, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Link } from 'react-router';
-
+import { useComputedColorScheme } from '@mantine/core';
 import { Brand } from '@/components/Brand';
 import { ColorSchemeToggle } from '@/components/ColorSchemeToggle';
 import { useAuth } from '@/features/auth/useAuth';
@@ -33,6 +33,8 @@ const PROMISES = [
 export function HomePage() {
   const { user } = useAuth();
 
+  const scheme = useComputedColorScheme('light');
+
   return (
     <Box>
       <Container size="md" py="md">
@@ -54,7 +56,7 @@ export function HomePage() {
 
       <Container size="md">
         <Stack align="center" gap="lg" py={80} ta="center">
-          <Title order={1} fz={{ base: 36, sm: 52 }} lh={1.1}>
+          <Title order={1} fz={{ base: 36, sm: 52 }} lh={1.1} c={scheme === 'light' ? '#2d2d2d' : '#e9e9e9'}>
             Get the personal info out of your files before you share them
           </Title>
           <Text size="lg" c="dimmed" maw={600}>
@@ -70,7 +72,7 @@ export function HomePage() {
         </Stack>
 
         <Stack gap="md" pb={60}>
-          <Title order={2}>How it works</Title>
+          <Title order={2} size={40} c={scheme === 'light' ? '#2d2d2d' : '#e9e9e9'}>How it works</Title>
           <SimpleGrid cols={{ base: 1, sm: 4 }} spacing="xl">
             {STEPS.map((text, i) => (
               <div key={text}>
@@ -81,21 +83,21 @@ export function HomePage() {
           </SimpleGrid>
         </Stack>
 
-        <Stack gap="md" pb={60}>
-          <Title order={2}>Modes</Title>
+        <Stack gap="lg" pb={60}>
+          <Title order={2} size={40} ta="right" c={scheme === 'light' ? '#2d2d2d' : '#e9e9e9'}>Modes</Title>
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
             {MODES.map(({ title, text }) => (
-              <Paper key={title} withBorder p="md">
-                <Text fw={600}>{title}</Text>
-                <Text size="sm" c="dimmed">{text}</Text>
+              <Paper key={title} withBorder p="sm" ta="right">
+                <Text fw={600} c={scheme === 'light' ? '#2d2d2d' : '#e9e9e9'}>{title}</Text>
+                <Text size="sm" c="dimmed" ta="right" color={scheme === 'light' ? '#2d2d2d' : '#e9e9e9'}>{text}</Text>
               </Paper>
             ))}
           </SimpleGrid>
         </Stack>
 
         <Stack id="privacy" gap="sm" pb={60}>
-          <Title order={2}>Privacy</Title>
-          <List spacing="xs">
+          <Title order={2} size={40} c={scheme === 'light' ? '#2d2d2d' : '#e9e9e9'}>Privacy</Title>
+          <List spacing="xxs">
             {PROMISES.map(text => <List.Item key={text}>{text}</List.Item>)}
           </List>
         </Stack>
