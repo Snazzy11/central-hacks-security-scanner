@@ -1,5 +1,6 @@
 import { AppShell, Button, Container, Group, Text } from '@mantine/core';
-import { Outlet } from 'react-router';
+import { IconHome } from '@tabler/icons-react';
+import { Link, Outlet } from 'react-router';
 
 import { useAuth } from '@/features/auth/useAuth';
 
@@ -16,6 +17,9 @@ export function AppLayout() {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Brand />
+            <Button component={Link} to="/" variant="default" leftSection={<IconHome size={16} />}>
+              Home
+            </Button>
             <Button
               onClick={() => window.location.assign('/api/redact')}
             >

@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/AppLayout';
 import { RequireAuth } from '@/components/RequireAuth';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { SignupPage } from '@/features/auth/SignupPage';
+import { ExtensionPage } from '@/features/extension/ExtensionPage';
 import { HomePage } from '@/features/home/HomePage';
 import { RedactionPage } from '@/features/redaction_page/RedactionPage';
 
@@ -14,6 +15,7 @@ export function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/extension" element={<ExtensionPage />} />
 
         {/* Everything inside RequireAuth needs a logged-in user */}
         <Route element={<RequireAuth />}>

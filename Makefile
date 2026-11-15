@@ -2,7 +2,7 @@
 # Needs: uv, pnpm, curl (curl is only used by `dev` to wait for the API).
 
 API_PORT ?= 8000
-API_CMD  := uv run --directory backend uvicorn app.main:app --reload --port $(API_PORT)
+API_CMD  := uv run --directory backend uvicorn app.main:app --reload --reload-dir app --port $(API_PORT)
 WEB_CMD  := pnpm --dir frontend run dev
 
 .DEFAULT_GOAL := help

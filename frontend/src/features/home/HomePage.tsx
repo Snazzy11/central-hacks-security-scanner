@@ -28,9 +28,6 @@ import { Brand } from '@/components/Brand';
 import { ColorSchemeToggle } from '@/components/ColorSchemeToggle';
 import { useAuth } from '@/features/auth/useAuth';
 
-// TODO: replace with the real store listing once the extension is published.
-const EXTENSION_URL = '#';
-
 const STEPS = [
   {
     icon: IconFileUpload,
@@ -97,8 +94,8 @@ export function HomePage() {
           </Text>
           <Group>
             <Button
-              component="a"
-              href={EXTENSION_URL}
+              component={Link}
+              to="/extension"
               size="lg"
               leftSection={<IconBrandChrome size={20} />}
             >
