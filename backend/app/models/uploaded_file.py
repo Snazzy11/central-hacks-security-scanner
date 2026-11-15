@@ -49,7 +49,7 @@ class UploadedFile(Base):
         String(16), default=OutputMode.REDACT, server_default=OutputMode.REDACT
     )
     output_path: Mapped[str | None] = mapped_column(String(1024))  # the redacted copy, once made
-    # What was found (counts per type, scan stats; no PII). See orchestrator/report.py
+    # see orchestrator/report.py
     summary: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     # processing -> completed | failed. Poll GET /redact/batches/{batch_id} to follow along.
     status: Mapped[str] = mapped_column(String(32), default="processing")

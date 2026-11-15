@@ -21,7 +21,7 @@ export interface UploadedFile {
   output_mode: OutputMode;
   status: FileStatus;
   created_at: string;
-  summary: FileSummary | null; // set once completed
+  summary: FileSummary | null;
 }
 
 export interface UploadedFileList {
@@ -30,11 +30,11 @@ export interface UploadedFileList {
   files: UploadedFile[];
 }
 
-/** What the backend found in a file (counts only, no PII). See backend/app/orchestrator/report.py */
+// see backend/app/orchestrator/report.py
 export interface FileSummary {
-  total: number; // every occurrence
-  unique: number; // distinct values
-  by_type: Record<string, number>; // entity type -> occurrences, most first
+  total: number;
+  unique: number;
+  by_type: Record<string, number>; // most first
   message: string;
   words_scanned: number;
   elapsed_ms: number;

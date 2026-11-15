@@ -30,6 +30,9 @@ export default defineConfig(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
 
+      // Splits sentences in JSX into one fragment per line
+      '@stylistic/jsx-one-expression-per-line': 'off',
+
       // Autofixed on save: sorted imports, unused imports removed.
       'simple-import-sort/imports': 'warn',
       'simple-import-sort/exports': 'warn',

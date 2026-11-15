@@ -12,7 +12,7 @@ import { typeLabel } from './piiTypes';
 import classes from './Results.module.css';
 import { ScanningAnimation } from './ScanningAnimation';
 
-/** Combine every completed file's summary into one view of the whole batch. */
+// add up the summaries of every finished file
 function combine(files: UploadedFile[]): FileSummary | null {
   const summaries = files.flatMap(f => (f.summary ? [f.summary] : []));
   if (summaries.length === 0) return null;
@@ -31,7 +31,7 @@ function combine(files: UploadedFile[]): FileSummary | null {
   };
 }
 
-/** Starts false, flips to true shortly after `ready`, so numbers and bars animate up from zero. */
+// flips to true just after `ready` so the numbers and bars animate up from 0
 function useRevealed(ready: boolean, ms = 200) {
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
@@ -91,7 +91,7 @@ export function ResultsPage() {
         )}
 
         {processing && (
-          <ScanningAnimation fileCount={files.length} done={files.filter(f => f.status !== 'processing').length} />
+          <ScanningAnimation fileCount={files.length} />
         )}
 
         {summary && <FindingsCard summary={summary} files={files.length - failed.length} revealed={revealed} />}
@@ -129,9 +129,9 @@ function FindingsCard({ summary, files, revealed }: { summary: FileSummary; file
             />
             {` pieces of PII were removed ${where}.`}
           </Text>
-          <Text c="dimmed" mt={6}>
-            {`${summary.unique.toLocaleString()} different values, ${summary.words_scanned.toLocaleString()} words read, took ${(summary.elapsed_ms / 1000).toFixed(1)}s.`}
-          </Text>
+          <Text c="dimmed">{summary.unique.toLocaleString()} different values</Text>
+          <Text c="dimmed">{summary.words_scanned.toLocaleString()} words read</Text>
+          <Text c="dimmed">{(summary.elapsed_ms / 1000).toFixed(1)} seconds of processing</Text>
         </div>
         <RingProgress
           size={120}

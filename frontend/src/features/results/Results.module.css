@@ -1,4 +1,4 @@
-/* the one accent: lime, darkened in light mode so it reads on white */
+/* darker lime in light mode so it's readable on white */
 .page {
   --pop: var(--mantine-color-lime-8);
 
@@ -17,14 +17,11 @@
   line-height: 1.25;
 }
 
-/* RollingNumber is a block by default; keep it inside the sentence */
 .inlineNumber {
   display: inline-flex;
-  vertical-align: bottom;
   font-weight: 700;
 }
 
-/* ------------------------------------------------------------ what we found: count | label | bar */
 .found {
   display: grid;
   grid-template-columns: auto auto 1fr;
@@ -48,7 +45,6 @@
   transition-delay: var(--delay, 0ms);
 }
 
-/* ------------------------------------------------------------ scanning */
 .scanner {
   position: relative;
   flex-shrink: 0;

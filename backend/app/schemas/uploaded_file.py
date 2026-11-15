@@ -21,7 +21,7 @@ class UploadedFileRead(BaseModel):
     output_mode: OutputMode
     status: str
     created_at: UTCDatetime
-    summary: dict[str, Any] | None = None  # set once completed, see orchestrator/report.py
+    summary: dict[str, Any] | None = None
 
 
 class UploadedFileList(BaseModel):

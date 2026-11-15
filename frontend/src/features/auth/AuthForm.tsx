@@ -5,7 +5,6 @@ import { Link, Navigate } from 'react-router';
 
 import { useAuth } from './useAuth';
 
-/** Shared form behind the login and signup pages. */
 export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
   const { user, login, register } = useAuth();
   const [email, setEmail] = useState('');
@@ -36,11 +35,8 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
 
   return (
     <Container size={420} my={80}>
-      <Title ta="center">{isLogin ? 'Welcome back' : 'Create account'}</Title>
-      <Text ta="center" c="dimmed" size="sm" mt={5}>
-        {isLogin ? 'Log in to redact your files' : 'Sign up to start redacting your files'}
-      </Text>
-      <Paper withBorder shadow="sm" p="xl" mt="xl">
+      <Title ta="center">{isLogin ? 'Log in' : 'Sign up'}</Title>
+      <Paper withBorder p="xl" mt="lg">
         <form onSubmit={submit}>
           <Stack>
             <TextInput

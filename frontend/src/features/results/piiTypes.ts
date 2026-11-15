@@ -1,4 +1,4 @@
-// entity type -> [singular, plural], lowercase so they read inside a sentence ("112 names")
+// [singular, plural]
 const NAMES: Record<string, [string, string]> = {
   PERSON: ['name', 'names'],
   EMAIL_ADDRESS: ['email address', 'email addresses'],
@@ -13,7 +13,6 @@ const NAMES: Record<string, [string, string]> = {
   USERNAME: ['username', 'usernames'],
 };
 
-/** e.g. ("PHONE_NUMBER", 1) -> "phone number", ("PHONE_NUMBER", 3) -> "phone numbers" */
 export function typeLabel(entityType: string, count: number) {
   const fallback = entityType.toLowerCase().replace(/_/g, ' ');
   const [one, many] = NAMES[entityType] ?? [fallback, fallback];

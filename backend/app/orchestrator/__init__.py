@@ -15,11 +15,10 @@ from app.orchestrator.report import build_summary
 
 class Result(NamedTuple):
     output_path: Path
-    summary: dict[str, Any]  # counts per type and scan stats; no PII, safe to store
+    summary: dict[str, Any]  # see report.py
 
 
 def process_file(file: UploadedFile) -> Result:
-    """Redact one uploaded file using the modes stored on its row."""
     started = time.perf_counter()
     path = Path(file.file_path)
     text = read_text(path)

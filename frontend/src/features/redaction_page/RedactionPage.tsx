@@ -44,13 +44,12 @@ export function RedactionPage() {
   const navigate = useNavigate();
   const upload = useMutation({
     mutationFn: uploadFiles,
-    // Files are redacted in the background; the results page shows the scan and then the stats.
     onSuccess: batch => navigate(`/results/${batch.batch_id}`),
     onError: err => notifications.show({ color: 'red', title: 'Upload failed', message: err.message }),
   });
 
   const addFiles = (dropped: File[]) => {
-    // Skip anything already selected (same name, size and modified time)
+    // skip files already added
     const isNew = (f: File) => !files.some(e => e.name === f.name && e.size === f.size && e.lastModified === f.lastModified);
     const fresh = dropped.filter(isNew);
 
@@ -78,7 +77,6 @@ export function RedactionPage() {
           onReject={onReject}
           accept={ACCEPTED_TYPES}
           loading={upload.isPending}
-          radius="sm"
           p="xl"
           styles={fileInputStyle}
         >
@@ -99,7 +97,7 @@ export function RedactionPage() {
           </Stack>
         </Dropzone>
 
-        <Paper withBorder p="md" radius="sm">
+        <Paper withBorder p="md">
           <Group justify="space-between" mb={6}>
             <Text size="sm" fw={500}>{`${files.length} of ${MAX_FILES} files`}</Text>
             <Text size="sm" c={atLimit ? 'red' : 'dimmed'}>
@@ -109,7 +107,7 @@ export function RedactionPage() {
           <Progress value={usedPercent} color={usedPercent >= 90 ? 'red' : undefined} size="sm" />
         </Paper>
 
-        <Paper withBorder p="md" radius="sm">
+        <Paper withBorder p="md">
           <Stack gap="md">
             <Stack gap={6}>
               <Text size="sm" fw={500}>Detection</Text>
@@ -139,7 +137,7 @@ export function RedactionPage() {
         {files.length > 0 && (
           <Stack gap="xs">
             {files.map((f, i) => (
-              <Paper key={`${f.name}-${f.size}-${f.lastModified}`} withBorder px="md" py="xs" radius="md">
+              <Paper key={`${f.name}-${f.size}-${f.lastModified}`} withBorder px="md" py="xs">
                 <Group justify="space-between" wrap="nowrap">
                   <Group gap="sm" wrap="nowrap" miw={0}>
                     <IconFile size={20} color="var(--mantine-color-dimmed)" />
@@ -171,7 +169,6 @@ export function RedactionPage() {
             {files.length > 0 ? `Upload ${files.length} file${files.length === 1 ? '' : 's'}` : 'Upload'}
           </Button>
         </Group>
-
       </Stack>
     </Container>
   );
