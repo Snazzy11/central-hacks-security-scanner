@@ -1,6 +1,30 @@
+"""Anonymizer: apply the pipeline's hits to the text and report what changed.
+
+    from anonymizer import anonymize
+    result = anonymize(text, hits, mode="replace")   # hits = pipeline.detect(text, mode)
+
+`result` (what the API returns):
+    {
+        "text":    the anonymized text,
+        "mode":    "redact" | "replace",
+        "summary": {
+            "total":   14,
+            "by_type": {"PHONE_NUMBER": 7, "PERSON": 5, ...},   # most first
+            "message": "Found 14 PII in your file:\\n7 phone numbers\\n5 names\\n...",
+        },
+        "changes": [ hit dicts that were applied, each with "replacement" added ],
+    }
+
+Counts are per occurrence: a phone number that appears 3 times counts 3 times.
+Where hits overlap (e.g. a USERNAME inside a PERSON) only one is applied --
+the higher score, then the longer span -- so the counts match the changes made.
+"""
 import random
 import string
+from collections import Counter
 from datetime import date, timedelta
+
+MODES = ("redact", "replace")
 
 
 def redact_text(text: str) -> str:
@@ -114,3 +138,89 @@ def replace_text(text_data: dict | list[dict]) -> dict:
         generator = _GENERATORS.get(entity["entity_type"])
         replacements[entity["id"]] = generator() if generator else redact_text(entity["text"])
     return replacements
+
+
+# ---------------------------------------------------------------- summary
+# entity type -> (singular, plural) for the readable message
+_DISPLAY_NAMES = {
+    "PHONE_NUMBER": ("phone number", "phone numbers"),
+    "US_SSN": ("social security number", "social security numbers"),
+    "PERSON": ("name", "names"),
+    "EMAIL_ADDRESS": ("email address", "email addresses"),
+    "CREDIT_CARD": ("credit card number", "credit card numbers"),
+    "US_BANK_NUMBER": ("bank account number", "bank account numbers"),
+    "IBAN_CODE": ("IBAN", "IBANs"),
+    "DATE_OF_BIRTH": ("date of birth", "dates of birth"),
+    "IP_ADDRESS": ("IP address", "IP addresses"),
+    "PASSWORD": ("password", "passwords"),
+    "USERNAME": ("username", "usernames"),
+}
+
+
+def _display_name(entity_type, count):
+    singular, plural = _DISPLAY_NAMES.get(
+        entity_type, (entity_type.replace("_", " ").lower(),) * 2
+    )
+    return singular if count == 1 else plural
+
+
+def summarize(hits):
+    """Counts per entity type (every occurrence) plus a readable message."""
+    counts = Counter(h["entity_type"] for h in hits)
+    by_type = dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+    total = sum(by_type.values())
+    if total == 0:
+        message = "No PII found in your file."
+    else:
+        lines = [f"Found {total} PII in your file:"]
+        lines += [f"{n} {_display_name(t, n)}" for t, n in by_type.items()]
+        message = "\n".join(lines)
+    return {"total": total, "by_type": by_type, "message": message}
+
+
+# ---------------------------------------------------------------- apply
+def _resolve_overlaps(hits):
+    """Keep one hit per overlapping region: higher score wins, then longer span."""
+    chosen = []
+    for h in sorted(hits, key=lambda h: (-h.get("score", 0), -(h["end"] - h["start"]), h["start"])):
+        if all(h["end"] <= c["start"] or c["end"] <= h["start"] for c in chosen):
+            chosen.append(h)
+    return sorted(chosen, key=lambda h: h["start"])
+
+
+def anonymize(text, hits, mode=None):
+    """Apply `hits` (from pipeline.detect) to `text` and report what changed.
+
+    mode="redact":  each PII becomes [-----] (same length as the original).
+    mode="replace": each PII becomes a fake value of the same type; every hit
+                    with the same id gets the same fake value.
+    mode=None:      inferred from the hits (ids present -> "replace").
+    """
+    if mode is None:
+        mode = "replace" if any(h.get("id") for h in hits) else "redact"
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
+
+    applied = _resolve_overlaps(hits)
+
+    # one fake value per id, so repeats of the same value stay consistent
+    fakes = replace_text([h for h in applied if h.get("id")]) if mode == "replace" else {}
+
+    out, pos, changes = [], 0, []
+    for h in applied:
+        if mode == "replace" and h.get("id") in fakes:
+            new_value = fakes[h["id"]]
+        else:
+            new_value = redact_text(h["text"])
+        out.append(text[pos:h["start"]])
+        out.append(new_value)
+        pos = h["end"]
+        changes.append({**h, "replacement": new_value})
+    out.append(text[pos:])
+
+    return {
+        "text": "".join(out),
+        "mode": mode,
+        "summary": summarize(applied),
+        "changes": changes,
+    }
