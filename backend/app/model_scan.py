@@ -22,7 +22,7 @@ import re
 import torch
 from gliner import GLiNER
 
-from app.prefilter import MODES, make_hit, normalize_value
+from backend.app.prefilter import MODES, make_hit, normalize_value
 
 MODEL_NAME = "nvidia/gliner-PII"
 MODEL_THRESHOLD = 0.4  # min GLiNER score for a span to count
