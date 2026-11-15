@@ -1,6 +1,6 @@
 """Evaluate the prefilter alone and the full pipeline against ai4privacy gold labels.
 
-Run:  python evaluate.py   (from the folder that holds prefilter.py)
+Run from backend/:  python -m app.evaluate
 
 Scores reported
 ---------------
@@ -23,8 +23,8 @@ from collections import Counter, defaultdict
 
 import pandas as pd
 
-from backend.app.model_scan import rescan
-from backend.app.prefilter import DEFAULT_MODE, PII_ENTITIES, find_pii
+from app.model_scan import rescan
+from app.prefilter import PII_ENTITIES, find_pii
 
 BETA = 2.0  # >1 weights recall more. 2 = recall counts twice as much.
 
@@ -46,7 +46,7 @@ LABEL_MAP = {
     "USERNAME": "USERNAME",
 }
 
-def detect(text, mode=DEFAULT_MODE):
+def detect(text, mode="redact"):
     hits = find_pii(text, mode=mode)            # stage 1: fast rules + spaCy
     hits = rescan(text, hits, mode=mode)        # stage 2: re-check + catch misses
     return hits
@@ -102,7 +102,7 @@ def evaluate(df, detector=None, entities=PII_ENTITIES, n=500, seed=42,
     for row in df.itertuples():
         text = row.source_text
         all_gold = [(int(m["start"]), int(m["end"]), m["label"]) for m in parse_mask(row.privacy_mask)]
-        gold = [(s, e, LABEL_MAP[l]) for s, e, l in all_gold if LABEL_MAP.get(l) in scorable]
+        gold = [(s, e, LABEL_MAP[label]) for s, e, label in all_gold if LABEL_MAP.get(label) in scorable]
 
         preds_all = [(h["start"], h["end"], h["entity_type"])
                      for h in detector(text) if h["entity_type"] in entities]
@@ -120,7 +120,7 @@ def evaluate(df, detector=None, entities=PII_ENTITIES, n=500, seed=42,
             if ok_strict:
                 strict[p[2]]["pred_hit"] += 1
         for p in preds:  # unscorable types can't be judged, so they're left out of precision
-            hit_labels = [l for s, e, l in all_gold if overlaps(p, (s, e))]
+            hit_labels = [label for s, e, label in all_gold if overlaps(p, (s, e))]
             anytype["pred"] += 1
             if hit_labels:
                 anytype["pred_hit"] += 1

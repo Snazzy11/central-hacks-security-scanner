@@ -1,21 +1,8 @@
-"""PII prefilter: run Presidio over a single string and report what it finds.
+"""Stage 1: find PII with Presidio (regexes + spaCy).
 
-Detection only -- replacing/redacting the text happens later in the pipeline,
-using the ids returned here.
-
-Usage:
-    from prefilter import find_pii, contains_pii
-
-    hits = find_pii(text, mode="replace")   # each hit has an "id" like "PERSON_1"
-    hits = find_pii(text, mode="redact")    # each hit has "id": None
-    contains_pii("hello world")             # -> False
-
-In "replace" mode the same value gets the same id everywhere in one document
-("John Smith" ... "john smith" -> PERSON_1 both times). IDs restart at 1 for
-each call, so they are consistent within one document, not across documents.
-
-The analyzer is built once, the first time this module is imported. Each call
-after that reuses it.
+In "replace" mode each hit gets an id like PERSON_1, and the same value gets the same id
+everywhere in the text ("John Smith" and "john smith" are both PERSON_1). In "redact" mode
+the id is None.
 """
 import re
 
@@ -27,7 +14,6 @@ from presidio_analyzer import (
     RecognizerResult,
 )
 
-# Entity types the prefilter looks for.
 PII_ENTITIES = [
     "PHONE_NUMBER",
     "US_SSN",
@@ -42,30 +28,13 @@ PII_ENTITIES = [
     "USERNAME",
 ]
 
-DEFAULT_SCORE_THRESHOLD = 0.0
-
 MODES = ("redact", "replace")
-
-# ---------------------------------------------------------------- hit format
-# Every stage (prefilter, model_scan, pipeline) returns a list of these dicts:
-#
-#   {
-#     "id":          "PERSON_1" in replace mode, None in redact mode
-#     "entity_type": "PERSON", "PHONE_NUMBER", ...
-#     "start":       char offset where the PII starts in the text
-#     "end":         char offset just after it ends (text[start:end] is the PII)
-#     "score":       confidence, 0-1
-#     "text":        the matched PII string
-#     "status":      "prefilter_only" | "model_only" | "confirmed" (| "rejected" when debugging)
-#     "sources":     which stages found it, e.g. ["prefilter", "model"]
-#   }
-HIT_KEYS = ("id", "entity_type", "start", "end", "score", "text", "status", "sources")
 STATUSES = ("prefilter_only", "model_only", "confirmed", "rejected")
 
 
+# Every stage passes hits around in this shape. text[start:end] is the PII.
 def make_hit(entity_type, start, end, score, text, hit_id=None,
              status="prefilter_only", sources=("prefilter",)):
-    """Build one hit dict. All stages use this, so the format can't drift."""
     if status not in STATUSES:
         raise ValueError(f"status must be one of {STATUSES}, got {status!r}")
     return {
@@ -78,8 +47,6 @@ def make_hit(entity_type, start, end, score, text, hit_id=None,
         "status": status,
         "sources": list(sources),
     }
-DEFAULT_MODE = "redact"
-
 
 
 class PasswordRecognizer(EntityRecognizer):
@@ -155,7 +122,6 @@ def _build_analyzer():
 analyzer = _build_analyzer()
 
 
-
 # Types where formatting doesn't matter: "555-123-4567" == "(555) 123 4567"
 _DIGIT_TYPES = {"PHONE_NUMBER", "US_SSN", "CREDIT_CARD", "US_BANK_NUMBER", "IBAN_CODE"}
 # Types where case matters, so "Hunter2" and "hunter2" get different ids
@@ -163,23 +129,15 @@ _CASE_SENSITIVE_TYPES = {"PASSWORD"}
 
 
 def normalize_value(entity_type, value):
-    """Key used to decide whether two hits are 'the same' value."""
+    """Two hits with the same normalized value are the same thing."""
     if entity_type in _DIGIT_TYPES:
         return re.sub(r"[^0-9A-Za-z]", "", value).lower()
-    value = " ".join(value.split())  # collapse whitespace / line breaks
+    value = " ".join(value.split())
     return value if entity_type in _CASE_SENSITIVE_TYPES else value.lower()
 
 
-
-def find_pii(text, entities=None, score_threshold=DEFAULT_SCORE_THRESHOLD, mode=DEFAULT_MODE):
-    """Return every PII hit in `text`, in order of position, as a list of
-    hit dicts (see HIT_KEYS above), each with status "prefilter_only".
-
-    mode="replace": "id" is e.g. "PERSON_1". The same value (ignoring case and
-                    spacing; digits only for phone/SSN/card/bank numbers) gets
-                    the same id every time it appears in this text.
-    mode="redact":  "id" is None.
-    """
+def find_pii(text, entities=None, score_threshold=0.0, mode="redact"):
+    """Every PII hit in the text, in order."""
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
     if not text:
@@ -192,28 +150,23 @@ def find_pii(text, entities=None, score_threshold=DEFAULT_SCORE_THRESHOLD, mode=
         score_threshold=score_threshold,
     )
 
-    ids = {}       # (entity_type, normalized value) -> id
-    counters = {}  # entity_type -> last number used
+    ids = {}       # (type, normalized value) -> id
+    counters = {}  # type -> last number used
     hits = []
     for r in sorted(results, key=lambda r: (r.start, r.end)):
-        start, end, etype, score = r.start, r.end, r.entity_type, r.score
-        value = text[start:end]
+        value = text[r.start:r.end]
         hit_id = None
         if mode == "replace":
-            key = (etype, normalize_value(etype, value))
+            key = (r.entity_type, normalize_value(r.entity_type, value))
             if key not in ids:
-                counters[etype] = counters.get(etype, 0) + 1
-                ids[key] = f"{etype}_{counters[etype]}"
+                counters[r.entity_type] = counters.get(r.entity_type, 0) + 1
+                ids[key] = f"{r.entity_type}_{counters[r.entity_type]}"
             hit_id = ids[key]
-        hits.append(make_hit(etype, start, end, score, value, hit_id=hit_id))
+        hits.append(make_hit(r.entity_type, r.start, r.end, r.score, value, hit_id=hit_id))
     return hits
 
 
-def contains_pii(text, entities=None, score_threshold=DEFAULT_SCORE_THRESHOLD):
-    """True if the text contains any PII. Use this for a yes/no gate."""
-    return bool(find_pii(text, entities, score_threshold))
-
-
+# python -m app.prefilter
 if __name__ == "__main__":
     sample = ("Hi, I'm John Smith, email john@x.com, password: Hunter2!, born 04/12/1990. "
               "Please ask JOHN SMITH or Jane Doe; call 555-123-4567 or (555) 123 4567.")

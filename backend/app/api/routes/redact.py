@@ -21,12 +21,10 @@ logger = logging.getLogger(__name__)
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-MAX_TOTAL_SIZE = 50 * 1024 * 1024  # 50 MiB, combined across all files in one request
+MAX_TOTAL_SIZE = 50 * 1024 * 1024  # for all files in one request
 MAX_FILES = 20
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md"}
 
-
-# Form fields shared by both upload endpoints (the files themselves are multipart too).
 DetectionModeForm = Annotated[DetectionMode, Form()]
 OutputModeForm = Annotated[OutputMode, Form()]
 
@@ -39,20 +37,14 @@ async def save_upload(
     output_mode: OutputMode,
     max_size: int = MAX_TOTAL_SIZE,
 ) -> UploadedFile:
-    """Validate and store one upload on disk. Returns an UploadedFile row that the caller
-    must add to the session. `max_size` is how many bytes this file may use. Removes the partial file if anything fails."""
+    """Save one upload to disk and return its (unsaved) row. Cleans up if anything fails."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file selected")
 
-    # get file extension and check it is allowed
     extension = Path(file.filename).suffix.lower()
     if extension not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type: {file.filename}"
-        )
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.filename}")
 
-    # Generate a uuid
     filename = f"{uuid.uuid4()}{extension}"
     file_path = UPLOAD_DIR / filename
 
@@ -63,20 +55,13 @@ async def save_upload(
         with file_path.open("wb") as buffer:
             while chunk := await file.read(1024 * 1024):
                 size += len(chunk)
-
                 if size > max_size:
-                    raise HTTPException(
-                        status_code=413,
-                        detail="Upload exceeds the 50 MB total size limit"
-                    )
-
+                    raise HTTPException(status_code=413, detail="Upload exceeds the 50 MB total size limit")
                 digest.update(chunk)
                 await asyncio.to_thread(buffer.write, chunk)
-
     except Exception:
         await asyncio.to_thread(file_path.unlink, missing_ok=True)
         raise
-
     finally:
         await file.close()
 
@@ -100,8 +85,7 @@ async def _discard(rows: list[UploadedFile]) -> None:
 
 
 def process_uploads(file_ids: list[int]) -> None:
-    """Background task: run the redaction pipeline on each file, one commit per file so
-    clients polling the batch see progress. Always deletes the original upload."""
+    """Background task. Commits after each file so the results page can show progress."""
     with SessionLocal() as db:
         for row in db.scalars(select(UploadedFile).where(UploadedFile.id.in_(file_ids))):
             try:
@@ -113,7 +97,7 @@ def process_uploads(file_ids: list[int]) -> None:
                 logger.exception("Redaction failed for file %s", row.id)
                 row.status = "failed"
             finally:
-                Path(row.file_path).unlink(missing_ok=True) # This doesnt seem to be actually deleting the files
+                Path(row.file_path).unlink(missing_ok=True)  # the original; the redacted copy stays
             db.commit()
 
 
