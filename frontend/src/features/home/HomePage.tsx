@@ -19,7 +19,7 @@ const MODES = [
   { title: 'Redact mode', text: 'Simply blacks out the PII.' },
   { title: 'Replace mode', text: 'Swaps PII for fake data. The same person or number always gets the same fake data.' },
   // { title: 'Script mode', text: 'Rapid, radical, regex reader to remove really ruinous data if exposed to the internet.' },
-  // { title: 'AI mode', text: 'Use a magic math machine to miraculously monitor most media modalities for a more mature deffensive posure.' },
+  // { title: 'AI mode', text: 'Use a magic math machine to miraculously monitor most media modalities for a more mature defensive posture.' },
   // { title: 'Redact mode', text: 'Removes all personal information from your document.' },
   // { title: 'Replace mode', text: 'Swaps personal information for consistent fake data, so the same real value always becomes the same fake one.' },
 ];
