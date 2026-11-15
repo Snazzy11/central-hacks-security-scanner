@@ -81,7 +81,7 @@ def make_hit(entity_type, start, end, score, text, hit_id=None,
 DEFAULT_MODE = "redact"
 
 
-# ---------------------------------------------------------------- recognizers
+
 class PasswordRecognizer(EntityRecognizer):
     # "password: X", "pwd = X", "passcode is X" ... group 1 is the password.
     PATTERN = re.compile(
@@ -155,7 +155,7 @@ def _build_analyzer():
 analyzer = _build_analyzer()
 
 
-# ------------------------------------------------------------------ helpers
+
 # Types where formatting doesn't matter: "555-123-4567" == "(555) 123 4567"
 _DIGIT_TYPES = {"PHONE_NUMBER", "US_SSN", "CREDIT_CARD", "US_BANK_NUMBER", "IBAN_CODE"}
 # Types where case matters, so "Hunter2" and "hunter2" get different ids
@@ -170,7 +170,7 @@ def normalize_value(entity_type, value):
     return value if entity_type in _CASE_SENSITIVE_TYPES else value.lower()
 
 
-# ------------------------------------------------------------------ public API
+
 def find_pii(text, entities=None, score_threshold=DEFAULT_SCORE_THRESHOLD, mode=DEFAULT_MODE):
     """Return every PII hit in `text`, in order of position, as a list of
     hit dicts (see HIT_KEYS above), each with status "prefilter_only".

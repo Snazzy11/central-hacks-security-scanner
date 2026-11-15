@@ -140,7 +140,7 @@ def replace_text(text_data: dict | list[dict]) -> dict:
     return replacements
 
 
-# ---------------------------------------------------------------- summary
+
 # entity type -> (singular, plural) for the readable message
 _DISPLAY_NAMES = {
     "PHONE_NUMBER": ("phone number", "phone numbers"),
@@ -178,7 +178,7 @@ def summarize(hits):
     return {"total": total, "by_type": by_type, "message": message}
 
 
-# ---------------------------------------------------------------- apply
+
 def _resolve_overlaps(hits):
     """Keep one hit per overlapping region: higher score wins, then longer span."""
     chosen = []
