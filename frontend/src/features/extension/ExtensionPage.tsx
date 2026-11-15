@@ -1,13 +1,11 @@
 import {
   ActionIcon,
-  Alert,
   Box,
   Button,
   Code,
   Container,
   CopyButton,
   Group,
-  List,
   Paper,
   Stack,
   Text,
@@ -23,7 +21,7 @@ import {
   IconDownload,
   IconFileZip,
   IconFolderOpen,
-  IconInfoCircle,
+  IconPin,
   IconPuzzle,
   IconShieldCheck,
   IconToggleRight,
@@ -81,8 +79,8 @@ export function ExtensionPage() {
               <Title order={1}>Install the browser extension</Title>
             </Group>
             <Text c="dimmed">
-              The extension checks files before a website receives them and lets you redact personal information
-              first. Everything runs locally in your browser. It isn't in the Chrome Web Store yet, so you add it
+              The extension checks files and pasted text before a website receives them and lets you redact
+              personal information first. Everything runs locally in your browser. It isn't in the Chrome Web Store yet, so you add it
               through Chrome's developer mode. It takes about a minute.
             </Text>
           </Stack>
@@ -120,6 +118,7 @@ export function ExtensionPage() {
                 <Code>piishooter-extension</Code>
                 {' '}
                 with a
+                {' '}
                 <Code>manifest.json</Code>
                 {' '}
                 file inside. Put it somewhere
@@ -137,6 +136,7 @@ export function ExtensionPage() {
                 {' '}
                 <b>⋮ menu → Extensions → Manage Extensions</b>
                 . In Edge the address is
+                {' '}
                 <Code>edge://extensions</Code>
                 .
               </Text>
@@ -180,59 +180,34 @@ export function ExtensionPage() {
                 . Don't select the .zip or a folder above it. The extension now
                 shows up in your list as
                 {' '}
-                <b>piidifile</b>
+                <b>PiiShooter</b>
                 .
               </Text>
             </Timeline.Item>
 
-            <Timeline.Item bullet={<IconShieldCheck size={16} />} title="Pin it and try it out">
+            <Timeline.Item bullet={<IconPin size={16} />} title="Pin it and sign in">
               <Text size="sm" c="dimmed" mt={4}>
                 Click the puzzle-piece icon in the toolbar and pin
                 {' '}
-                <b>PII Upload Filter</b>
-                . Click it to choose
-                between asking you and redacting automatically, pick which kinds of data to look for, and turn
-                it off for specific sites. Then upload a text or Office file on any website to see it work.
+                <b>PiiShooter</b>
+                . Open it and click
+                {' '}
+                <b>Log in</b>
+                {' '}
+                to sign in with your PiiShooter account. If you're already logged in on this site, the extension
+                picks that up on its own, and logging out of either one logs out both.
+              </Text>
+            </Timeline.Item>
+
+            <Timeline.Item bullet={<IconShieldCheck size={16} />} title="Try it out">
+              <Text size="sm" c="dimmed" mt={4}>
+                Upload a text or Office file, or paste text with an email address or phone number into any
+                website. The extension shows what it found and lets you redact it first. In the extension's menu
+                you can switch to redacting automatically, choose what to look for, and turn it off for
+                specific sites.
               </Text>
             </Timeline.Item>
           </Timeline>
-
-          <Alert variant="light" icon={<IconInfoCircle />} title="Good to know">
-            <List size="sm" spacing={4}>
-              <List.Item>
-                Chrome may show a "Disable developer mode extensions" message when it starts. Click
-                {' '}
-                <b>Keep</b>
-                {' '}
-                or close it. This is normal for extensions that aren't from the store.
-              </List.Item>
-              <List.Item>
-                To update, download the zip again, replace the folder's contents, and click the ↻ reload icon on
-                the extension's card in
-                {' '}
-                <Code>{EXTENSIONS_PAGE}</Code>
-                .
-              </List.Item>
-              <List.Item>
-                To use it on local
-                {' '}
-                <Code>file://</Code>
-                {' '}
-                pages, open the extension's
-                {' '}
-                <b>Details</b>
-                {' '}
-                and turn on
-                {' '}
-                <b>Allow access to file URLs</b>
-                .
-              </List.Item>
-              <List.Item>
-                It checks plain-text files and .docx, .xlsx and .pptx files. PDFs and images are passed through
-                without being checked.
-              </List.Item>
-            </List>
-          </Alert>
         </Stack>
       </Container>
     </Box>
