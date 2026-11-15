@@ -21,7 +21,7 @@ export async function downloadFile(file: UploadedFile) {
   const blob = await (await request(`/redact/${file.id}/download`)).blob();
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${file.original_filename.replace(/\.[^.]*$/, '')}.redacted.txt`;
+  link.download = file.original_filename.replace(/(\.[^.]*)$/, '.redacted$1');
   link.click();
   URL.revokeObjectURL(link.href);
 }

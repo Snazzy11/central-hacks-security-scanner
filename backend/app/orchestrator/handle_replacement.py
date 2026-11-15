@@ -1,32 +1,32 @@
+<<<<<<< HEAD
 from backend.app.redact import redact_text, replace_text
+=======
+import re
+
+from app.redact import redact_text, replace_text
+>>>>>>> refs/remotes/origin/main
 
 
-def handle_replacement(text: str, hits: list[dict], output_mode: str) -> str:
-    """Return `text` with every hit redacted or replaced.
+def build_replacements(hits: list[dict], output_mode: str) -> dict[str, str]:
+    """Map every PII string we found to the value that should replace it.
 
     Hits come from prefilter.find_pii / model_scan.rescan (see HIT_KEYS in prefilter.py),
     found with the same `output_mode` ("redact" or "replace") passed here.
     """
-    spans = _merge_overlaps(hits)
-
     if output_mode == "replace":
-        fakes = replace_text(spans)  # {hit id: fake value}, so repeats of a value stay consistent
-        new_values = [fakes[span["id"]] for span in spans]
-    else:
-        new_values = [redact_text(text[span["start"]:span["end"]]) for span in spans]
-
-    # Splice from the end so earlier offsets stay valid.
-    for span, new_value in reversed(list(zip(spans, new_values, strict=True))):
-        text = text[:span["start"]] + new_value + text[span["end"]:]
-    return text
+        fakes = replace_text(hits)  # {hit id: fake value}, so repeats of a value stay consistent
+        return {hit["text"]: fakes[hit["id"]] for hit in hits}
+    return {hit["text"]: redact_text(hit["text"]) for hit in hits}
 
 
-def _merge_overlaps(hits: list[dict]) -> list[dict]:
-    """Combine hits that overlap into one, so no part of the PII is left behind."""
-    merged: list[dict] = []
-    for hit in sorted(hits, key=lambda h: (h["start"], h["end"])):
-        if merged and hit["start"] < merged[-1]["end"]:
-            merged[-1] = {**merged[-1], "end": max(merged[-1]["end"], hit["end"])}
-        else:
-            merged.append(hit)
-    return merged
+def replacement_pattern(replacements: dict[str, str]) -> re.Pattern[str]:
+    """One regex matching any PII string. Longest first, so "John Smith" wins over "John".
+    A match can't touch a letter or digit, so a short hit like "Al" never edits "Alexander"."""
+    longest_first = sorted(replacements, key=len, reverse=True)
+    return re.compile(r"(?<!\w)(?:" + "|".join(re.escape(pii) for pii in longest_first) + r")(?!\w)")
+
+
+def replace_all(text: str, replacements: dict[str, str]) -> str:
+    if not replacements:
+        return text
+    return replacement_pattern(replacements).sub(lambda match: replacements[match.group()], text)

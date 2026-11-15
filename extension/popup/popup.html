@@ -2,40 +2,166 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>PII Upload Filter</title>
+  <title>PiiShooter</title>
   <style>
-    body { width: 300px; margin: 0; padding: 14px 16px; font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: #0f172a; }
-    h1 { font-size: 15px; margin: 0 0 10px; }
-    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin: 14px 0 6px; }
-    label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
-    select { font: inherit; width: 100%; padding: 4px; }
-    .site { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; border-radius: 8px; padding: 8px 10px; }
-    .site span { font-weight: 600; word-break: break-all; }
-    .hint { color: #64748b; font-size: 12px; margin-top: 4px; }
+    /* Same look as the website: Mantine's default palette with lime as the primary colour. */
+    :root {
+      color-scheme: light dark;
+      --primary: #82c91e;          /* lime.6 */
+      --primary-hover: #74b816;    /* lime.7 */
+      --on-primary: #000;          /* Mantine autoContrast puts dark text on lime */
+      --body: #fff;
+      --text: #000;
+      --dimmed: #868e96;
+      --border: #dee2e6;
+      --surface: #f8f9fa;
+      --control: #f1f3f5;
+      --control-active: #fff;
+      --switch-off: #e9ecef;
+      --button: #fff;
+      --button-hover: #f8f9fa;
+      --button-border: #ced4da;
+      --danger: #fa5252;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0, 0, 0, .05), 0 1px 2px rgba(0, 0, 0, .1);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --body: #242424;           /* dark.7 */
+        --text: #c9c9c9;           /* dark.0 */
+        --dimmed: #828282;         /* dark.2 */
+        --border: #424242;         /* dark.4 */
+        --surface: #2e2e2e;        /* dark.6 */
+        --control: #1f1f1f;        /* dark.8 */
+        --control-active: #3b3b3b; /* dark.5 */
+        --switch-off: #3b3b3b;
+        --button: #2e2e2e;
+        --button-hover: #3b3b3b;
+        --button-border: #424242;
+        --shadow: none;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      width: 340px; margin: 0; padding: 16px;
+      background: var(--body); color: var(--text);
+      font: 14px/1.45 Barlow, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    [hidden] { display: none !important; }
+
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .brand { font-size: 22px; font-weight: 800; letter-spacing: -.01em; line-height: 1; }
+    .brand .pii { color: var(--primary); }
+
+    .card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: var(--body); box-shadow: var(--shadow); }
+    .card + .card { margin-top: 10px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .label { font-weight: 600; }
+    .dimmed { color: var(--dimmed); font-size: 12px; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+    h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--dimmed); margin: 16px 0 8px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      height: 30px; padding: 0 12px; border-radius: var(--radius); cursor: pointer;
+      font: inherit; font-size: 13px; font-weight: 600; line-height: 1; text-decoration: none; white-space: nowrap;
+      border: 1px solid var(--button-border); background: var(--button); color: var(--text);
+    }
+    .btn:hover { background: var(--button-hover); }
+    .btn.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+    .btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    .btn.subtle { border-color: transparent; background: transparent; color: var(--dimmed); padding: 0 8px; }
+    .btn.subtle:hover { background: var(--button-hover); color: var(--text); }
+    .btn:focus-visible, .seg button:focus-visible, .switch input:focus-visible + .track { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .buttons { display: flex; gap: 8px; margin-top: 10px; }
+    .buttons .btn { flex: 1; }
+
+    .avatar {
+      flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+      background: color-mix(in srgb, var(--primary) 18%, transparent); color: var(--primary); font-weight: 700;
+    }
+
+    /* Segmented control (matches the site's SegmentedControl) */
+    .seg { display: flex; padding: 4px; gap: 4px; border-radius: var(--radius); background: var(--control); }
+    .seg button {
+      flex: 1; height: 28px; border: 0; border-radius: 6px; cursor: pointer; background: transparent;
+      font: inherit; font-size: 13px; font-weight: 500; line-height: 1; color: var(--dimmed);
+    }
+    .seg button[aria-pressed="true"] { background: var(--control-active); color: var(--text); box-shadow: var(--shadow); }
+    .hint { margin-top: 6px; }
+
+    /* Switch (matches Mantine's Switch) */
+    .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 5px 0; cursor: pointer; }
+    .switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .track { flex: none; position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--switch-off); border: 1px solid var(--border); transition: background .15s, border-color .15s; }
+    .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+    .switch input:checked + .track { background: var(--primary); border-color: var(--primary); }
+    .switch input:checked + .track::after { transform: translateX(14px); }
+
+    footer { margin-top: 14px; text-align: center; }
+    footer a { color: var(--dimmed); font-size: 12px; text-decoration: none; }
+    footer a:hover { color: var(--text); text-decoration: underline; }
   </style>
 </head>
 <body>
-  <h1>PII Upload Filter</h1>
+  <header>
+    <div class="brand"><span class="pii">pii</span>{shooter}</div>
+    <a class="btn subtle" id="openSite" href="#" title="Open the PiiShooter web app">Web app ↗</a>
+  </header>
 
-  <div class="site" id="siteRow">
-    <span id="host">this site</span>
-    <label><input type="checkbox" id="siteEnabled"> On</label>
+  <!-- Account: filled in by popup.js -->
+  <div class="card" id="signedOut" hidden>
+    <div class="label">Sign in to PiiShooter</div>
+    <div class="dimmed">Use the same account as the website. Signing in on the site signs in the extension too.</div>
+    <div class="buttons">
+      <a class="btn primary" id="signIn" href="#">Log in</a>
+      <a class="btn" id="signUp" href="#">Create account</a>
+    </div>
+  </div>
+  <div class="card" id="signedIn" hidden>
+    <div class="row">
+      <div class="row" style="justify-content:flex-start;min-width:0">
+        <div class="avatar" id="avatar">?</div>
+        <div style="min-width:0">
+          <div class="label truncate" id="email">Signed in</div>
+          <div class="dimmed">Linked to the website</div>
+        </div>
+      </div>
+      <button class="btn" id="signOut" type="button">Log out</button>
+    </div>
   </div>
 
-  <h2>When PII is found</h2>
-  <select id="mode">
-    <option value="ask">Ask me what to do</option>
-    <option value="auto">Redact automatically</option>
-  </select>
+  <div class="card" id="siteRow">
+    <label class="switch">
+      <div style="min-width:0">
+        <div class="label truncate" id="host">this site</div>
+        <div class="dimmed">Check uploads and pastes here</div>
+      </div>
+      <input type="checkbox" id="siteEnabled"><span class="track"></span>
+    </label>
+  </div>
 
-  <h2>Detect</h2>
+  <h2>When personal info is found</h2>
+  <div class="seg" role="group" aria-label="When personal info is found">
+    <button type="button" data-mode="ask">Ask me</button>
+    <button type="button" data-mode="auto">Redact automatically</button>
+  </div>
+  <div class="dimmed hint" id="modeHint"></div>
+
+  <h2>Check</h2>
+  <label class="switch"><span>Pasted text</span><input type="checkbox" id="checkPaste"><span class="track"></span></label>
+  <label class="switch"><span>Remove author names from Office files</span><input type="checkbox" id="stripMetadata"><span class="track"></span></label>
+  <label class="switch"><span>Warn about files that can't be checked (e.g. PDF)</span><input type="checkbox" id="warnUnsupported"><span class="track"></span></label>
+
+  <h2>Look for</h2>
   <div id="detectors"></div>
 
-  <h2>Other</h2>
-  <label><input type="checkbox" id="stripMetadata"> Remove author names from Office files</label>
-  <label><input type="checkbox" id="warnUnsupported"> Warn about files that can't be checked (e.g. PDF)</label>
-  <div class="hint">Changes apply to new uploads immediately.</div>
+  <footer><a href="#" id="installGuide">Changes apply right away · Help</a></footer>
 
+  <script src="../src/config.js"></script>
   <script src="../src/detectors.js"></script>
   <script src="popup.js"></script>
 </body>

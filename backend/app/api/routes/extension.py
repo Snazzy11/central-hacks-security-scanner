@@ -11,7 +11,7 @@ router = APIRouter(tags=["extension"])
 EXTENSION_DIR = Path(__file__).resolve().parents[4] / "extension"
 ZIP_FOLDER = "piishooter-extension"
 # Only what Chrome needs to load the extension; tests stay out of the download.
-INCLUDE = ("manifest.json", "README.md", "popup", "src")
+INCLUDE = ("manifest.json", "README.md", "icons", "popup", "src")
 
 
 @router.get("/extension/download")

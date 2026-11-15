@@ -8,7 +8,14 @@ import { useState } from 'react';
 import { downloadFile, fetchBatch, MAX_FILES, MAX_TOTAL_SIZE, uploadFiles } from './api';
 import type { DetectionMode, OutputMode, UploadedFile } from './types';
 
-const ACCEPTED_TYPES = [MIME_TYPES.pdf, MIME_TYPES.docx, 'text/plain', 'text/markdown'];
+// Match by extension as well as MIME type: browsers often report .docx and .md files with a
+// wrong or empty type. Keep in sync with ALLOWED_EXTENSIONS in backend/app/api/routes/redact.py
+const ACCEPTED_TYPES = {
+  [MIME_TYPES.pdf]: ['.pdf'],
+  [MIME_TYPES.docx]: ['.docx'],
+  'text/plain': ['.txt'],
+  'text/markdown': ['.md'],
+};
 
 const MAX_TOTAL_MB = MAX_TOTAL_SIZE / 1024 ** 2;
 

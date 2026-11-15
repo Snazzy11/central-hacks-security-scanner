@@ -19,7 +19,6 @@ import {
   IconEyeOff,
   IconFileUpload,
   IconScan,
-  IconShieldLock,
   IconTrash,
 } from '@tabler/icons-react';
 import { Link } from 'react-router';

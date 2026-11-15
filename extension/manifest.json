@@ -1,20 +1,37 @@
 {
-    "name":"piidifile", 
-    "version":"1.0.0",
-    "description":"A simple extension to detect personal information identifiers in files in order to help users protect their privacy.",
-    "manifest_version":3,
-    "permissions": ["storage", "activeTab"],
-    "action": {
-        "default_title": "PII Upload Filter",
-        "default_popup": "popup/popup.html"
+  "name": "PiiShooter",
+  "version": "1.1.0",
+  "description": "Catches personal information in files and text before you upload or paste them into a website.",
+  "manifest_version": 3,
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["http://localhost:5173/*"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "PiiShooter",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "exclude_matches": ["http://localhost:5173/*"],
+      "js": ["src/detectors.js", "src/zip.js", "src/office.js", "src/content.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_origin_as_fallback": true
     },
-    "content_scripts": [
-        {
-        "matches": ["<all_urls>"],
-        "js": ["src/detectors.js", "src/zip.js", "src/office.js", "src/content.js"],
-        "run_at": "document_start",
-        "all_frames": true,
-        "match_origin_as_fallback": true
-        }
-    ]
+    {
+      "matches": ["http://localhost:5173/*"],
+      "js": ["src/config.js", "src/site-bridge.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }

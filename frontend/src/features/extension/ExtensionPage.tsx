@@ -24,6 +24,7 @@ import {
   IconFileZip,
   IconFolderOpen,
   IconInfoCircle,
+  IconPin,
   IconPuzzle,
   IconShieldCheck,
   IconToggleRight,
@@ -81,8 +82,8 @@ export function ExtensionPage() {
               <Title order={1}>Install the browser extension</Title>
             </Group>
             <Text c="dimmed">
-              The extension checks files before a website receives them and lets you redact personal information
-              first. Everything runs locally in your browser. It isn't in the Chrome Web Store yet, so you add it
+              The extension checks files and pasted text before a website receives them and lets you redact
+              personal information first. Everything runs locally in your browser. It isn't in the Chrome Web Store yet, so you add it
               through Chrome's developer mode. It takes about a minute.
             </Text>
           </Stack>
@@ -120,6 +121,7 @@ export function ExtensionPage() {
                 <Code>piishooter-extension</Code>
                 {' '}
                 with a
+                {' '}
                 <Code>manifest.json</Code>
                 {' '}
                 file inside. Put it somewhere
@@ -137,6 +139,7 @@ export function ExtensionPage() {
                 {' '}
                 <b>⋮ menu → Extensions → Manage Extensions</b>
                 . In Edge the address is
+                {' '}
                 <Code>edge://extensions</Code>
                 .
               </Text>
@@ -180,19 +183,31 @@ export function ExtensionPage() {
                 . Don't select the .zip or a folder above it. The extension now
                 shows up in your list as
                 {' '}
-                <b>piidifile</b>
+                <b>PiiShooter</b>
                 .
               </Text>
             </Timeline.Item>
 
-            <Timeline.Item bullet={<IconShieldCheck size={16} />} title="Pin it and try it out">
+            <Timeline.Item bullet={<IconPin size={16} />} title="Pin it and sign in">
               <Text size="sm" c="dimmed" mt={4}>
                 Click the puzzle-piece icon in the toolbar and pin
                 {' '}
-                <b>PII Upload Filter</b>
-                . Click it to choose
-                between asking you and redacting automatically, pick which kinds of data to look for, and turn
-                it off for specific sites. Then upload a text or Office file on any website to see it work.
+                <b>PiiShooter</b>
+                . Open it and click
+                {' '}
+                <b>Log in</b>
+                {' '}
+                to sign in with your PiiShooter account. If you're already logged in on this site, the extension
+                picks that up on its own, and logging out of either one logs out both.
+              </Text>
+            </Timeline.Item>
+
+            <Timeline.Item bullet={<IconShieldCheck size={16} />} title="Try it out">
+              <Text size="sm" c="dimmed" mt={4}>
+                Upload a text or Office file, or paste text with an email address or phone number into any
+                website. The extension shows what it found and lets you redact it first. In the extension's menu
+                you can switch to redacting automatically, choose what to look for, and turn it off for
+                specific sites.
               </Text>
             </Timeline.Item>
           </Timeline>
@@ -228,8 +243,8 @@ export function ExtensionPage() {
                 .
               </List.Item>
               <List.Item>
-                It checks plain-text files and .docx, .xlsx and .pptx files. PDFs and images are passed through
-                without being checked.
+                It checks text you paste plus plain-text, .docx, .xlsx and .pptx files. PDFs and images are
+                passed through without being checked. It stays off on this website, which redacts files itself.
               </List.Item>
             </List>
           </Alert>
