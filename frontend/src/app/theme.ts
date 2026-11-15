@@ -21,6 +21,6 @@ export const theme = createTheme({
   primaryShade: 6, // lime.6 in both light and dark mode
   autoContrast: true, // lime is light, so filled buttons get dark text instead of white
   defaultRadius: 'md',
-  fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  fontFamily: 'Barlow',
   headings: { fontWeight: '700' },
 });

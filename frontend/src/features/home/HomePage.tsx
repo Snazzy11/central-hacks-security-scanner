@@ -70,7 +70,6 @@ export function HomePage() {
       <Container size="md" py="md">
         <Group justify="space-between">
           <Group gap="xs">
-            <IconShieldLock size={28} color="var(--mantine-primary-color-filled)" />
             <Brand />
           </Group>
           <Group>
