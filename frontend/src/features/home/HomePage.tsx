@@ -47,7 +47,7 @@ const STEPS = [
 
 const MODES = [
   { title: 'Script mode', text: 'Fast, rule-based detection of personal information patterns.' },
-  { title: 'AI mode', text: 'Runs script mode, then adds an AI check layer on top to catch personal information the rules miss.' },
+  { title: 'AI mode', text: 'Use a magic math machine to maraculously monitor most media modalities for a more mature deffensive posure.' },
   { title: 'Redact mode', text: 'Removes all personal information from your document.' },
   { title: 'Replace mode', text: 'Swaps personal information for consistent fake data, so the same real value always becomes the same fake one.' },
 ];
