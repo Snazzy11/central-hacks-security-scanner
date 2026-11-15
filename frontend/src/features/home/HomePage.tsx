@@ -36,7 +36,7 @@ const STEPS = [
   {
     icon: IconScan,
     title: 'Scan the files',
-    text: 'The file(s) are then scanned for names, emails, phone numbers, addresses, IDs, and more. Optionally, an NER maching-learning model runs on top to catch what the rules miss.60% of the time it works every time'
+    text: 'The file(s) are then scanned for names, emails, phone numbers, addresses, IDs, and more. Optionally, an NER maching-learning model runs on top to catch what the rules miss. 60% of the time it works every time'
   },
   {
     icon: IconDownload,
