@@ -12,9 +12,6 @@ import { ResultsPage } from '@/features/results/ResultsPage';
 export function AppRoutes() {
   return (
     <BrowserRouter>
-      <head>
-        <link rel="icon" type="image/png" href="../logo/favicon.png" />
-      </head>
       <Routes>
         <Route index element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
