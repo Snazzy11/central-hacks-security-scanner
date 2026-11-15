@@ -1,5 +1,8 @@
 # PiiShooter
 
+PiiShooter is a hackathon submission for Central Hacks 2026. The project won the "Behind the Darkness" track.
+The PiiShooter app is both a wep application and a chrome extension that redacts personally identifiable information from files and text.
+
 ```bash
 ./run.sh dev     # backend :8000 (API docs at /docs), frontend :5173
 ./run.sh check   # ruff + pyright + eslint + tsc
