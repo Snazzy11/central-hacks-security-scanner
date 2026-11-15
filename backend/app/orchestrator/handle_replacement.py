@@ -1,4 +1,4 @@
-from app.redact import redact_text, replace_text
+from backend.app.redact import redact_text, replace_text
 
 
 def handle_replacement(text: str, hits: list[dict], output_mode: str) -> str:
