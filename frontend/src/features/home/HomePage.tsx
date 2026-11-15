@@ -30,18 +30,18 @@ import { useAuth } from '@/features/auth/useAuth';
 const STEPS = [
   {
     icon: IconFileUpload,
-    title: '1. Upload',
-    text: 'Drop files into the web app, or let our browser extension catch a file you are about to upload to another site.',
+    title: 'Upload the files',
+    text: 'Drop the files into the web app, or let our browser extension catch a file you are about to upload to another website.',
   },
   {
     icon: IconScan,
-    title: '2. We keep your sensitive data from being leaked',
-    text: 'Names, emails, phone numbers, addresses, IDs and more are detected. Optionally, an AI check runs on top to catch what the rules miss.',
+    title: 'Scan the files',
+    text: 'The file(s) are then scanned for names, emails, phone numbers, addresses, IDs, and more. Optionally, an NER maching-learning model runs on top to catch what the rules miss.',
   },
   {
     icon: IconDownload,
-    title: '3. Get it back',
-    text: 'You get your file back with the sensitive details redacted or swapped for realistic fake ones, ready to share.',
+    title: 'Download it back',
+    text: 'You can download your file(s) back with the sensitive details redacted or swapped for realistic fake ones.',
   },
 ];
 
