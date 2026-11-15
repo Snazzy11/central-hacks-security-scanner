@@ -211,4 +211,5 @@ def download_my_file(file_id: int, user: CurrentUser, db: DbSession) -> FileResp
     row = get_my_file(file_id, user, db)
     if row.status != "completed" or row.output_path is None:
         raise HTTPException(status.HTTP_409_CONFLICT, f"File is not ready (status: {row.status})")
-    return FileResponse(row.output_path, filename=f"{Path(row.original_filename).stem}.redacted.txt")
+    suffix = Path(row.output_path).suffix  # the redacted copy keeps the original file type
+    return FileResponse(row.output_path, filename=f"{Path(row.original_filename).stem}.redacted{suffix}")
