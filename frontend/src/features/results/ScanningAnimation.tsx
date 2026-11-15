@@ -20,13 +20,9 @@ export function ScanningAnimation({ fileCount, done }: { fileCount: number; done
         </div>
         <div>
           <Text fw={600} role="status">
-            {fileCount > 1 ? 'Reading through your files now.' : 'Reading through your file now.'}
+            {fileCount > 1 ? 'Analyzing files' : 'Analyzing file.'}
           </Text>
-          <Text size="sm" c="dimmed">
-            {'Bigger files can take a minute. '}
-            {fileCount > 1 && `${done} of ${fileCount} done, `}
-            {`${seconds}s so far.`}
-          </Text>
+          <Text size="sm" c="dimmed">Bigger files or more files will take longer, as well as AI mode.</Text>
         </div>
       </Group>
     </Paper>

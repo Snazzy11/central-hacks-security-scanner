@@ -61,7 +61,7 @@ export function ExtensionPage() {
     <Box>
       <Container size="md" py="md">
         <Group justify="space-between">
-          <Brand />
+          <Brand height={73} />
           <Group>
             <ColorSchemeToggle />
             <Button component={Link} to={user ? '/redact' : '/signup'} variant="default">

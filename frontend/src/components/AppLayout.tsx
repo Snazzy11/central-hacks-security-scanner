@@ -12,7 +12,7 @@ export function AppLayout() {
   const { user, logout } = useAuth();
 
   return (
-    <AppShell header={{ height: 60 }} padding="md">
+    <AppShell header={{ height: 64 }} padding="md">
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
           <Group>
@@ -31,7 +31,6 @@ export function AppLayout() {
       </AppShell.Header>
 
       <AppShell.Main>
-        {/* Pages pick their own width with <Container size=...> */}
         <Outlet />
       </AppShell.Main>
     </AppShell>

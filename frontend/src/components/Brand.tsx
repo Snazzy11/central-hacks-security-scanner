@@ -1,15 +1,18 @@
-import { Title, useMantineColorScheme } from '@mantine/core';
-import darkLogo from '../logo/piishooter logo v5 vers.png';
-import lightLogo from '../logo/piishooter logo v5 vers light.png';
+import { Image, useComputedColorScheme } from '@mantine/core';
 import { Link } from 'react-router';
-/** App name as clickable text that links to the home page. */
-export function Brand() {
-  const { colorScheme } = useMantineColorScheme();
+
+import lightLogo from '../logo/piishooter logo v5 vers light.png';
+import darkLogo from '../logo/piishooter logo v5 vers.png';
+
+/**
+ * The logo, linking to the home page. Sized by height so it fits whatever bar it sits in.
+ * useComputedColorScheme (not useMantineColorScheme) so "auto" resolves to the real light/dark.
+ */
+export function Brand({ height = 40 }: { height?: number }) {
+  const scheme = useComputedColorScheme('light');
   return (
-    <Title>
-      <Link to="/">
-        {colorScheme === 'light' ? <img src={lightLogo} width={250}></img> : <img src={darkLogo} width={250}></img>}
-      </Link>
-    </Title>
+    <Link to="/" style={{ display: 'flex' }} aria-label="PiiShooter home">
+      <Image src={scheme === 'light' ? lightLogo : darkLogo} h={height} w="auto" alt="PiiShooter" />
+    </Link>
   );
 }

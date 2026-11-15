@@ -66,7 +66,7 @@ export function HomePage() {
       <Container size="md" py="md">
         <Group justify="space-between">
           <Group gap="xs">
-            <Brand />
+            <Brand height={73} />
           </Group>
           <Group>
             <ColorSchemeToggle />

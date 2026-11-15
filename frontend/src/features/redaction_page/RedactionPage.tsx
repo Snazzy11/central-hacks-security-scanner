@@ -9,8 +9,7 @@ import { useNavigate } from 'react-router';
 import { MAX_FILES, MAX_TOTAL_SIZE, uploadFiles } from './api';
 import type { DetectionMode, OutputMode } from './types';
 
-// Match by extension as well as MIME type: browsers often report .docx and .md files with a
-// wrong or empty type. Keep in sync with ALLOWED_EXTENSIONS in backend/app/api/routes/redact.py
+// Keep in sync with ALLOWED_EXTENSIONS in backend/app/api/routes/redact.py
 const ACCEPTED_TYPES = {
   [MIME_TYPES.pdf]: ['.pdf'],
   [MIME_TYPES.docx]: ['.docx'],
@@ -21,13 +20,13 @@ const ACCEPTED_TYPES = {
 const MAX_TOTAL_MB = MAX_TOTAL_SIZE / 1024 ** 2;
 
 const DETECTION_HELP: Record<DetectionMode, string> = {
-  script: 'Fast, rule-based detection of PII patterns.',
-  ai: 'Runs script mode, then adds an AI check on top to catch PII the rules miss.',
+  script: 'Fast, scripted detection of PII.',
+  ai: 'Run script mode, then an AI layer to catch significantly more PII. Takes much longer.',
 };
 
 const OUTPUT_HELP: Record<OutputMode, string> = {
-  redact: 'Redacts all PII in the document.',
-  replace: 'Swaps PII for consistent fake data, so the same real value always gets the same fake one.',
+  redact: 'Redacts PII in the document.',
+  replace: 'Swaps out PII for fake data. Designed to be consistent for each person, phone number, etc.',
 };
 
 const formatSize = (bytes: number) =>
@@ -72,18 +71,14 @@ export function RedactionPage() {
 
   return (
     <Container size="sm">
-      <Stack gap="lg" py="xl">
-        <Stack gap={4}>
-          <Title order={2}>Redact your files</Title>
-          <Text c="dimmed">Upload documents and we will find and redact sensitive information.</Text>
-        </Stack>
-
+      <Stack gap="sm" py="xl">
+        <Title order={2}>Redact your files</Title>
         <Dropzone
           onDrop={addFiles}
           onReject={onReject}
           accept={ACCEPTED_TYPES}
           loading={upload.isPending}
-          radius="lg"
+          radius="sm"
           p="xl"
           styles={fileInputStyle}
         >
@@ -104,7 +99,7 @@ export function RedactionPage() {
           </Stack>
         </Dropzone>
 
-        <Paper withBorder p="md" radius="md">
+        <Paper withBorder p="md" radius="sm">
           <Group justify="space-between" mb={6}>
             <Text size="sm" fw={500}>{`${files.length} of ${MAX_FILES} files`}</Text>
             <Text size="sm" c={atLimit ? 'red' : 'dimmed'}>
@@ -114,7 +109,7 @@ export function RedactionPage() {
           <Progress value={usedPercent} color={usedPercent >= 90 ? 'red' : undefined} size="sm" />
         </Paper>
 
-        <Paper withBorder p="md" radius="md">
+        <Paper withBorder p="md" radius="sm">
           <Stack gap="md">
             <Stack gap={6}>
               <Text size="sm" fw={500}>Detection</Text>
