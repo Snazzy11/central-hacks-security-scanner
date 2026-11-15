@@ -115,7 +115,7 @@
   <!-- Account: filled in by popup.js -->
   <div class="card" id="signedOut" hidden>
     <div class="label">Sign in to PiiShooter</div>
-    <div class="dimmed">Use the same account as the website. Signing in on the site signs in the extension too.</div>
+    <div class="dimmed">Files are checked by PiiShooter, so you need to sign in for those. Use the same account as the website; signing in there signs in the extension too.</div>
     <div class="buttons">
       <a class="btn primary" id="signIn" href="#">Log in</a>
       <a class="btn" id="signUp" href="#">Create account</a>
@@ -127,7 +127,7 @@
         <div class="avatar" id="avatar">?</div>
         <div style="min-width:0">
           <div class="label truncate" id="email">Signed in</div>
-          <div class="dimmed">Linked to the website</div>
+          <div class="dimmed">Uploads are sent to PiiShooter to be checked</div>
         </div>
       </div>
       <button class="btn" id="signOut" type="button">Log out</button>
@@ -144,17 +144,31 @@
     </label>
   </div>
 
+  <!-- Each .seg sets the setting named in data-setting to the clicked button's data-value. -->
   <h2>When personal info is found</h2>
-  <div class="seg" role="group" aria-label="When personal info is found">
-    <button type="button" data-mode="ask">Ask me</button>
-    <button type="button" data-mode="auto">Redact automatically</button>
+  <div class="seg" role="group" aria-label="When personal info is found" data-setting="mode">
+    <button type="button" data-value="ask">Ask me</button>
+    <button type="button" data-value="auto">Redact automatically</button>
   </div>
-  <div class="dimmed hint" id="modeHint"></div>
+  <div class="dimmed hint" data-hint-for="mode"></div>
+
+  <h2>Detection</h2>
+  <div class="seg" role="group" aria-label="Detection" data-setting="detectionMode">
+    <button type="button" data-value="script">Script mode</button>
+    <button type="button" data-value="ai">AI mode</button>
+  </div>
+  <div class="dimmed hint" data-hint-for="detectionMode"></div>
+
+  <h2>Replace with</h2>
+  <div class="seg" role="group" aria-label="Replace with" data-setting="outputMode">
+    <button type="button" data-value="redact">Redact mode</button>
+    <button type="button" data-value="replace">Replace mode</button>
+  </div>
+  <div class="dimmed hint" data-hint-for="outputMode"></div>
 
   <h2>Check</h2>
   <label class="switch"><span>Pasted text</span><input type="checkbox" id="checkPaste"><span class="track"></span></label>
-  <label class="switch"><span>Remove author names from Office files</span><input type="checkbox" id="stripMetadata"><span class="track"></span></label>
-  <label class="switch"><span>Warn about files that can't be checked (e.g. PDF)</span><input type="checkbox" id="warnUnsupported"><span class="track"></span></label>
+  <label class="switch"><span>Warn about files that couldn't be checked</span><input type="checkbox" id="warnUnsupported"><span class="track"></span></label>
 
   <h2>Look for</h2>
   <div id="detectors"></div>
@@ -162,6 +176,7 @@
   <footer><a href="#" id="installGuide">Changes apply right away · Help</a></footer>
 
   <script src="../src/config.js"></script>
+  <script src="../src/settings.js"></script>
   <script src="../src/detectors.js"></script>
   <script src="popup.js"></script>
 </body>

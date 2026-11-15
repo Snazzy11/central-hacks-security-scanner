@@ -9,7 +9,7 @@ Public API:
     write_redacted(path, output_path, replacements)   -> same type of file, with each
                                                          {original text: new text} replaced
 
-Supported: .txt, .md, .pdf, .docx, .csv
+Supported: .pdf, .docx, .csv, and the plain-text types in PLAIN_TEXT_EXTENSIONS
 """
 
 import codecs
@@ -403,10 +403,16 @@ def _column_letters(index: int) -> str:
     return letters
 
 
+# These are mainly text files that are safe to search and replace as a whole without some structure that replacement would break.
+PLAIN_TEXT_EXTENSIONS = (
+    ".txt", ".md", ".log", ".json", ".jsonl", ".xml", ".html", ".htm",
+    ".yaml", ".yml", ".ini", ".vcf", ".sql", ".tex",
+)
+
 FORMATS = {
-    ".txt": Format(_read_plain, _write_plain),
-    ".md": Format(_read_plain, _write_plain),
+    **{extension: Format(_read_plain, _write_plain) for extension in PLAIN_TEXT_EXTENSIONS},
     ".pdf": Format(_read_pdf, _write_pdf),
     ".docx": Format(_read_docx, _write_docx),
     ".csv": Format(_read_csv, _write_csv),
 }
+SUPPORTED_EXTENSIONS = frozenset(FORMATS)

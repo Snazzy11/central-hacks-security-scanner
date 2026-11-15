@@ -15,7 +15,7 @@ detection, and a Chrome extension that intercepts file uploads on other websites
  Web app (React) ──┐
                    ├──►  FastAPI backend ──►  detection pipeline ──►  redacted file
  Chrome extension ─┘      (login, uploads,       (Presidio + optional
-   (not wired up yet)      batches, status)        GLiNER AI check)
+                           batches, status)        GLiNER AI check)
 ```
 
 The core promise: **upload a file, get back a safe-to-share version.** Everything else supports that.
@@ -154,19 +154,20 @@ failed. Only the redacted copy remains.
 
 ## 4. The browser extension 🟡
 
-The extension already exists and works on its own:
+The extension intercepts file uploads and pastes on **any website** (file inputs, drag-and-drop,
+paste), before the page sees them, and **uses the same pipeline as the web app** to clean them.
 
-- It intercepts file uploads on **any website** (file inputs, drag-and-drop, paste), before the page
-  sees the file.
-- It scans with its own **local regex detectors** (emails, phones, SSNs, Luhn-checked cards,
-  mod-97-checked IBANs, and more), including Office files (it unzips, redacts the text, and re-zips).
-- Today it works **entirely in the browser; nothing leaves the machine**.
+- Files go to `POST /api/redact/instant`, which runs `clean_file` and sends the cleaned file back in
+  the response. It doesn't poll, because the website is waiting for the upload. Nothing is saved, and
+  these files don't appear in the user's history.
+- Pasted text is checked first by small local regexes, because the decision to block a paste can't
+  wait for the network. Once a paste is blocked, `POST /api/redact/text` redacts it.
+- It signs in through the website (it copies the site's token), and a background service worker
+  makes the API calls, since content scripts are bound by each page's CORS rules.
+- When the user is signed out, files are flagged as unchecked, and pastes are redacted locally.
 
-**It is not connected to the backend yet.** The plan is for it to offer to send the file to the
-PiiShooter service, wait for the batch to finish, and swap the cleaned file into the page. The backend side
-of that already exists (batch ids and polling). The missing pieces are extension login (it can't use the
-web app's stored token), CORS for the extension's origin, and a decision about when it uses the
-local scan versus the full service.
+Details are in `extension/README.md`. The background worker has been tested against the live API.
+The in-page part hasn't been run in a real browser yet.
 
 ---
 
@@ -181,7 +182,7 @@ local scan versus the full service.
 | Original files deleted after processing | ✅ |
 | **Redacted files are still kept** after download | ⬜ conflicts with the privacy promise |
 | **Output is always `.txt`**; PDF/DOCX come back as text | ⬜ needs per-format writers |
-| Extension ↔ backend integration | ⬜ |
+| Extension ↔ backend integration | 🟡 API and worker tested; not yet run in a browser |
 | Jobs interrupted by a server restart stay `processing` forever | ⬜ |
 | DOCX text extraction glues paragraphs together | ⬜ may hurt detection |
 

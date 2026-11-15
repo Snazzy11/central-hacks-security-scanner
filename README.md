@@ -42,3 +42,10 @@ Colors, fonts and corner radius are set in `app/theme.ts`; Mantine turns that in
 variables that every component uses. Dark/light mode is the toggle in the header.
 Use style props (`<Text c="dimmed" mt="md">`) for one-offs, or a `Foo.module.css` next to
 the component for anything custom.
+
+## Browser extension (`extension/`)
+
+A Chrome extension that catches files and pasted text before other websites get them. It sends
+them to the instant endpoints in `api/routes/redact.py` (`/redact/instant`, `/redact/text`), so
+it uses the same pipeline as the web app. Load it unpacked from `chrome://extensions`. See
+`extension/README.md` for how it works.

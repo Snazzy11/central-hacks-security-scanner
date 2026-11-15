@@ -1,4 +1,4 @@
-// PII detectors. Pure functions, no DOM — usable from content scripts and Node tests.
+// Fast and simple regex PII detectors for pasted text
 (function (root) {
   'use strict';
 
@@ -27,12 +27,12 @@
     return rem === 1;
   }
 
-  // Each detector: id, label, regex (global), optional validate(match) and
-  // optional group (capture group index holding the sensitive part).
-  // Order = priority when matches overlap.
+  // Each detector: id (the server's entity type, see DISPLAY_NAMES in backend/app/redact.py), label,
+  // regex (global), optional validate(match) and optional group (capture group index holding the
+  // sensitive part). Order = priority when matches overlap.
   const DETECTORS = [
     {
-      id: 'SSN',
+      id: 'US_SSN',
       label: 'US Social Security number',
       regex: /(?<![\d-])(?!000|666|9\d\d)\d{3}-(?!00)\d{2}-(?!0000)\d{4}(?![\d-])/g,
     },
@@ -46,24 +46,24 @@
       },
     },
     {
-      id: 'IBAN',
+      id: 'IBAN_CODE',
       label: 'Bank account (IBAN)',
       regex: /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]){11,30}\b/g,
       validate: ibanValid,
     },
     {
-      id: 'EMAIL',
+      id: 'EMAIL_ADDRESS',
       label: 'Email address',
       regex: /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g,
     },
     {
-      id: 'DOB',
+      id: 'DATE_OF_BIRTH',
       label: 'Date of birth',
       regex: /\b(?:DOB|D\.O\.B\.?|date of birth|birth ?date|born(?: on)?)\s*[:\-]?\s*(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}|\d{4}-\d{2}-\d{2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d{1,2},? \d{4})/gi,
       group: 1,
     },
     {
-      id: 'PHONE',
+      id: 'PHONE_NUMBER',
       label: 'Phone number',
       regex: /(?<![\w+-])(?:\+?1[ .-]?)?(?:\(\d{3}\)|\d{3})[ .-]?\d{3}[ .-]?\d{4}(?![\w-])|(?<![\w+])\+\d{1,3}(?:[ .-]?\d{2,4}){2,5}(?![\w-])/g,
       validate: (m) => {
@@ -78,16 +78,14 @@
     },
   ];
 
-  const DEFAULT_ENABLED = Object.fromEntries(DETECTORS.map((d) => [d.id, true]));
-
   /**
    * Find PII in text.
    * @returns {{type:string,start:number,end:number,value:string}[]} sorted, non-overlapping
    */
-  function findPII(text, enabled = DEFAULT_ENABLED) {
+  function findPII(text, disabledTypes = []) {
     const raw = [];
     DETECTORS.forEach((det, priority) => {
-      if (!enabled[det.id]) return;
+      if (disabledTypes.includes(det.id)) return;
       det.regex.lastIndex = 0;
       let m;
       while ((m = det.regex.exec(text)) !== null) {
@@ -114,18 +112,24 @@
     return taken.map(({ priority, ...rest }) => rest);
   }
 
-  function replacementFor(type) {
-    return `[REDACTED:${type}]`;
+  /** The same marker the server uses in redact mode (redact_text in backend/app/redact.py). */
+  function replacementFor(value) {
+    return `[${'-'.repeat(Math.max(0, value.length - 2))}]`;
   }
 
-  function redactText(text, matches) {
+  /** Same result shape as the server's POST /api/redact/text, so callers can use either. */
+  function redact(text, disabledTypes = []) {
+    const matches = findPII(text, disabledTypes);
     let out = '';
     let pos = 0;
     for (const m of matches) {
-      out += text.slice(pos, m.start) + replacementFor(m.type);
+      out += text.slice(pos, m.start) + replacementFor(m.value);
       pos = m.end;
     }
-    return out + text.slice(pos);
+    return {
+      text: out + text.slice(pos),
+      findings: matches.map(({ type, value }) => ({ type, value, replacement: replacementFor(value) })),
+    };
   }
 
   /** Mask a value for display in the UI so we never echo full PII back. */
@@ -136,7 +140,7 @@
     return v.slice(0, keep) + '•'.repeat(Math.max(3, v.length - keep * 2)) + v.slice(v.length - keep);
   }
 
-  const api = { DETECTORS, DEFAULT_ENABLED, findPII, redactText, replacementFor, maskForDisplay, luhnValid, ibanValid };
+  const api = { DETECTORS, findPII, redact, maskForDisplay, luhnValid, ibanValid };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.PIIDetectors = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

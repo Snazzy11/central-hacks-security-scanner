@@ -1,3 +1,4 @@
+import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -9,10 +10,18 @@ from app.core.config import settings
 from app.db.session import init_db, seed_default_user
 
 
+def load_detection_models() -> None:
+    """Importing the prefilter will load spaCy, which is slow
+    Do this early on for that reason"""
+    import app.prefilter  # noqa: F401
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     init_db()
     seed_default_user()
+    # Starts immediately the background to "warm up" what the api needs
+    threading.Thread(target=load_detection_models, daemon=True).start()
     yield
 
 
