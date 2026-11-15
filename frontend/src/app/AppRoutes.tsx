@@ -7,6 +7,7 @@ import { SignupPage } from '@/features/auth/SignupPage';
 import { ExtensionPage } from '@/features/extension/ExtensionPage';
 import { HomePage } from '@/features/home/HomePage';
 import { RedactionPage } from '@/features/redaction_page/RedactionPage';
+import { ResultsPage } from '@/features/results/ResultsPage';
 
 export function AppRoutes() {
   return (
@@ -21,6 +22,7 @@ export function AppRoutes() {
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
             <Route path="redact" element={<RedactionPage />} />
+            <Route path="results/:batchId" element={<ResultsPage />} />
             {/* New pages go here: <Route path="thing" element={<ThingPage />} /> */}
           </Route>
         </Route>

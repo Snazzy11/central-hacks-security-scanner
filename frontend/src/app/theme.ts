@@ -21,6 +21,7 @@ export const theme = createTheme({
   primaryShade: 6, // lime.6 in both light and dark mode
   autoContrast: true, // lime is light, so filled buttons get dark text instead of white
   defaultRadius: 'md',
-  fontFamily: 'Barlow',
-  headings: { fontWeight: '700' },
+  // Loaded in index.html. Headings need it too: Mantine gives them their own default font.
+  fontFamily: 'Barlow, sans-serif',
+  headings: { fontFamily: 'Barlow, sans-serif', fontWeight: '700' },
 });

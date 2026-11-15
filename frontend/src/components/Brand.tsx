@@ -1,4 +1,5 @@
 import { Title } from '@mantine/core';
+
 import logo from '../logo/piishooter logo v5 vers.png';
 // import { Link } from 'react-router';
 // export const APP_NAME = 'PiiShooter';
