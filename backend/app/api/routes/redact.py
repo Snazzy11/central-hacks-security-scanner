@@ -1,18 +1,22 @@
 import asyncio
 import hashlib
+import logging
 import uuid
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser
-from app.db.session import DbSession
+from app.db.session import DbSession, SessionLocal
 from app.models import DetectionMode, OutputMode, UploadedFile
+from app.orchestrator import process_file
 from app.schemas.uploaded_file import UploadedFileList, UploadedFileRead
 
 router = APIRouter(prefix="/redact", tags=["redact"])
+logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -95,10 +99,27 @@ async def _discard(rows: list[UploadedFile]) -> None:
         await asyncio.to_thread(Path(row.file_path).unlink, missing_ok=True)
 
 
-@router.post("/single", response_model=UploadedFileRead, status_code=status.HTTP_201_CREATED)
+def process_uploads(file_ids: list[int]) -> None:
+    """Background task: run the redaction pipeline on each file, one commit per file so
+    clients polling the batch see progress. Always deletes the original upload."""
+    with SessionLocal() as db:
+        for row in db.scalars(select(UploadedFile).where(UploadedFile.id.in_(file_ids))):
+            try:
+                row.output_path = str(process_file(row))
+                row.status = "completed"
+            except Exception:
+                logger.exception("Redaction failed for file %s", row.id)
+                row.status = "failed"
+            finally:
+                Path(row.file_path).unlink(missing_ok=True)
+            db.commit()
+
+
+@router.post("/single", response_model=UploadedFileRead, status_code=status.HTTP_202_ACCEPTED)
 async def upload_single_file(
     user: CurrentUser,
     db: DbSession,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     detection_mode: DetectionModeForm = DetectionMode.SCRIPT,
     output_mode: OutputModeForm = OutputMode.REDACT,
@@ -110,13 +131,15 @@ async def upload_single_file(
     except Exception:
         await _discard([row])
         raise
+    background_tasks.add_task(process_uploads, [row.id])
     return row
 
 
-@router.post("/multiple", response_model=UploadedFileList, status_code=status.HTTP_201_CREATED)
+@router.post("/multiple", response_model=UploadedFileList, status_code=status.HTTP_202_ACCEPTED)
 async def upload_multiple_files(
     user: CurrentUser,
     db: DbSession,
+    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
     detection_mode: DetectionModeForm = DetectionMode.SCRIPT,
     output_mode: OutputModeForm = OutputMode.REDACT,
@@ -142,6 +165,7 @@ async def upload_multiple_files(
         await _discard(saved)
         raise
 
+    background_tasks.add_task(process_uploads, [row.id for row in saved])
     return UploadedFileList(
         batch_id=batch_id, count=len(saved), files=[UploadedFileRead.model_validate(r) for r in saved]
     )
@@ -180,3 +204,11 @@ def get_my_file(file_id: int, user: CurrentUser, db: DbSession) -> UploadedFile:
     if row is None or row.owner_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "File not found")
     return row
+
+
+@router.get("/{file_id}/download")
+def download_my_file(file_id: int, user: CurrentUser, db: DbSession) -> FileResponse:
+    row = get_my_file(file_id, user, db)
+    if row.status != "completed" or row.output_path is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"File is not ready (status: {row.status})")
+    return FileResponse(row.output_path, filename=f"{Path(row.original_filename).stem}.redacted.txt")

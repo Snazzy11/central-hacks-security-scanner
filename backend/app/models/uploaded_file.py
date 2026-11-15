@@ -48,7 +48,9 @@ class UploadedFile(Base):
     output_mode: Mapped[str] = mapped_column(
         String(16), default=OutputMode.REDACT, server_default=OutputMode.REDACT
     )
-    status: Mapped[str] = mapped_column(String(32), default="uploaded")
+    output_path: Mapped[str | None] = mapped_column(String(1024))  # the redacted copy, once made
+    # processing -> completed | failed. Poll GET /redact/batches/{batch_id} to follow along.
+    status: Mapped[str] = mapped_column(String(32), default="processing")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)

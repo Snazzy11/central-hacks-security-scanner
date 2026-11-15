@@ -74,7 +74,6 @@ def scrapeText(file_path, type_of_file) -> str:
 
 # file = open(test_file_path)
 # file = open(pdf_file_path) # TODO: gets file from api endpoint    
-type_of_file = detect_type(pdf_file_path)
 
 # scrapes text from file depending on the extension type
 # print(scrapeText(pdf_file_path, type_of_file))
