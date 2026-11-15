@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-from backend.app.redact import redact_text, replace_text
-=======
 import re
 
 from app.redact import redact_text, replace_text
->>>>>>> refs/remotes/origin/main
 
 
 def build_replacements(hits: list[dict], output_mode: str) -> dict[str, str]:
