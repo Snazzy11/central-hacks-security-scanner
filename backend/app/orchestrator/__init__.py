@@ -1,34 +1,36 @@
-"""The redaction pipeline: read a file, find the PII, write a cleaned copy.
+"""The redaction pipeline: read a file, find the PII, write a cleaned copy of the same type.
 
-    scrapeText -> find_pii -> (rescan, in AI mode) -> handle_replacement -> write
+    read_text -> find_pii -> (rescan, in AI mode) -> build_replacements -> write_redacted
 """
 
 from pathlib import Path
 
 from app.models import UploadedFile
-from app.orchestrator.handle_replacement import handle_replacement
+from app.orchestrator.documents import read_text, write_redacted
+from app.orchestrator.handle_replacement import build_replacements
 
 
 def process_file(file: UploadedFile) -> Path:
     """Redact one uploaded file using the modes stored on its row. Returns the cleaned file."""
     path = Path(file.file_path)
-    text = _read_text(path)
-    hits = _find_pii(text, file.detection_mode, file.output_mode)
-    cleaned = handle_replacement(text, hits, file.output_mode)
+    hits = _find_pii(read_text(path), file.detection_mode, file.output_mode)
+    replacements = build_replacements(hits, file.output_mode)
 
-    # The pipeline works on plain text, so the result is always a .txt file.
-    output_path = path.with_suffix(".redacted.txt")
-    output_path.write_text(cleaned, encoding="utf-8")
+    output_path = path.with_name(f"{path.stem}.redacted{path.suffix}")
+    write_redacted(path, output_path, replacements)
+    _ensure_pii_removed(output_path, replacements)
     return output_path
 
 
-def _read_text(path: Path) -> str:
-    from app.scraper import detect_type, scrapeText  # heavy imports: only load when needed
-
-    text = scrapeText(path, detect_type(path))
-    if text is None:
-        raise ValueError(f"Unsupported file type: {path.suffix}")
-    return text
+def _ensure_pii_removed(output_path: Path, replacements: dict[str, str]) -> None:
+    """Fail rather than hand back a file that still contains something we found."""
+    remaining = read_text(output_path)
+    for new_value in replacements.values():  # a replacement may contain a PII string; ignore those
+        remaining = remaining.replace(new_value, "")
+    leftover = sum(pii in remaining for pii in replacements)
+    if leftover:
+        output_path.unlink()
+        raise RuntimeError(f"{leftover} PII value(s) could not be removed from the file")
 
 
 def _find_pii(text: str, detection_mode: str, output_mode: str) -> list[dict]:
